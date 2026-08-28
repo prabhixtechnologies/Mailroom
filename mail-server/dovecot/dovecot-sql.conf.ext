@@ -1,0 +1,27 @@
+# Dovecot SQL user lookup — maps mailbox address to Maildir path.
+# Password query is commented out until provisioning writes bcrypt hashes.
+#
+# mail_mailboxes has no plaintext password column. imap_password_enc is for
+# EXTERNAL_IMAP pull credentials (encrypted at app layer) — not usable here.
+
+driver = pgsql
+connect = host=postgres dbname=prabhix user=prabhix password=prabhix
+
+# When mail/provisioning adds password_hash (BLF-CRYPT), uncomment:
+# default_pass_scheme = BLF-CRYPT
+# password_query = SELECT password_hash AS password FROM mail_mailboxes
+#                  WHERE address = '%u' AND status = 'ACTIVE' AND deleted_at IS NULL
+
+user_query = SELECT split_part(address::text, '@', 2) AS domain,
+                    split_part(address::text, '@', 1) AS user,
+                    'maildir:/var/mail/vhosts/' ||
+                    split_part(address::text, '@', 2) || '/' ||
+                    split_part(address::text, '@', 1) AS home,
+                    1000 AS uid, 1000 AS gid
+             FROM mail_mailboxes
+             WHERE address = '%u'
+               AND status = 'ACTIVE'
+               AND deleted_at IS NULL
+
+iterate_query = SELECT address AS user FROM mail_mailboxes
+                WHERE status = 'ACTIVE' AND deleted_at IS NULL

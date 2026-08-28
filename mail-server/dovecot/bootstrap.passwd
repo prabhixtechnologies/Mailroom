@@ -1,0 +1,5 @@
+# Bootstrap IMAP accounts — replace before production.
+# Format: user@domain:{BLF-CRYPT}hash
+# Generate: docker exec -it prabhix-mail-dovecot-1 doveadm pw -s BLF-CRYPT
+#
+# support@prabhixtechnologies.com:{BLF-CRYPT}$2y$05$CHANGEME

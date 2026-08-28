@@ -1,0 +1,84 @@
+# Postfix main.cf — Prabhix self-hosted transport.
+# Recipient validity comes from Postgres (mail_domains / mail_mailboxes / mail_aliases),
+# not static maps, so provisioning through the platform UI takes effect immediately.
+
+# ---------------------------------------------------------------------------
+# Identity
+# ---------------------------------------------------------------------------
+myhostname = ${MAIL_HOSTNAME}
+mydomain = prabhixtechnologies.com
+myorigin = $mydomain
+mydestination = localhost
+inet_interfaces = all
+inet_protocols = ipv4
+
+# ---------------------------------------------------------------------------
+# TLS — inbound "may" accepts plaintext from legacy MTAs; submission uses STARTTLS.
+# Outbound uses DANE when the remote publishes TLSA records.
+# ---------------------------------------------------------------------------
+smtpd_tls_cert_file = /etc/ssl/certs/ssl-cert-snakeoil.pem
+smtpd_tls_key_file = /etc/ssl/private/ssl-cert-snakeoil.key
+smtpd_tls_security_level = may
+smtpd_tls_loglevel = 1
+smtp_tls_security_level = may
+smtp_tls_dane_policy = dane
+smtp_tls_loglevel = 1
+
+# ---------------------------------------------------------------------------
+# Size limit — must match prabhix.limits.max-attachment-size-bytes (25 MiB).
+# ---------------------------------------------------------------------------
+message_size_limit = 26214400
+mailbox_size_limit = 0
+
+# ---------------------------------------------------------------------------
+# Virtual hosting — dynamic lookups against platform Postgres tables.
+# ---------------------------------------------------------------------------
+virtual_mailbox_domains = pgsql:/etc/postfix/pgsql-virtual-mailbox-domains.cf
+virtual_mailbox_maps = pgsql:/etc/postfix/pgsql-virtual-mailbox-maps.cf
+virtual_alias_maps = pgsql:/etc/postfix/pgsql-virtual-alias-maps.cf
+virtual_mailbox_base = /var/mail/vhosts
+virtual_mailbox_limit = 0
+virtual_minimum_uid = 100
+virtual_uid_maps = static:1000
+virtual_gid_maps = static:1000
+virtual_transport = lmtp:unix:private/dovecot-lmtp
+
+# ---------------------------------------------------------------------------
+# Rspamd milter — spam scoring, DKIM signing, DMARC alignment checks.
+# ---------------------------------------------------------------------------
+smtpd_milters = inet:rspamd:11332
+non_smtpd_milters = $smtpd_milters
+milter_default_action = accept
+milter_protocol = 6
+
+# ---------------------------------------------------------------------------
+# Inbound policy — reject relay attempts to unlisted recipients.
+# ---------------------------------------------------------------------------
+smtpd_relay_restrictions = permit_mynetworks, reject_unauth_destination
+smtpd_recipient_restrictions =
+    permit_mynetworks,
+    permit_sasl_authenticated,
+    reject_unauth_destination,
+    reject_non_fqdn_recipient,
+    reject_unknown_recipient_domain,
+    check_policy_service inet:rspamd:11333
+
+# ---------------------------------------------------------------------------
+# SASL — authenticated submission on port 587 delegates to Dovecot.
+# ---------------------------------------------------------------------------
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+smtpd_sasl_auth_enable = yes
+smtpd_sasl_security_options = noanonymous
+smtpd_sasl_local_domain = $myhostname
+broken_sasl_auth_clients = yes
+
+# ---------------------------------------------------------------------------
+# Outbound relay — set MAIL_RELAY_HOST until AWS port 25 is unblocked.
+# ---------------------------------------------------------------------------
+# relayhost is injected by the boky/postfix image from RELAYHOST env when set.
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+maillog_file = /dev/stdout
