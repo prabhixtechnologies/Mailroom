@@ -196,11 +196,37 @@ See `postfix/pgsql-*.cf` for exact SQL against `V5__mail_core.sql`.
 
 ---
 
-## Bootstrap IMAP passwords
+## Mailbox passwords
 
-Dovecot cannot decrypt `imap_password_enc`. For initial access, edit
-`dovecot/bootstrap.passwd` (BLF-CRYPT hashes) and restart Dovecot.
-Long-term: provisioning must write bcrypt hashes and switch `10-auth.conf` to SQL passdb.
+Dovecot authenticates from Postgres. `mail_mailboxes.password_hash` (migration `V61`) holds a BCrypt
+hash, which Dovecot reads as BLF-CRYPT through the SQL passdb in `dovecot/dovecot-sql.conf.ext`.
+
+Issue one through the API — it is returned once and cannot be retrieved again:
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  https://api.prabhixtechnologies.com/api/v1/mail/mailboxes/$MAILBOX_ID/mail-password
+# → {"address":"support@prabhixtechnologies.com","password":"...","issuedAt":"..."}
+```
+
+Revoke with `DELETE` on the same path. That nulls `password_hash`, and the passdb query filters on
+`password_hash IS NOT NULL`, so there is nothing left to authenticate against — no flag that one
+code path checks and another misses.
+
+This is deliberately **not** `imap_password_enc`. That column holds AES-GCM ciphertext of the
+credentials for pulling from someone *else's* IMAP server in `EXTERNAL_IMAP` mode; it is reversible
+because the poller has to replay the original password, and Dovecot cannot decrypt it. It is also not
+the console password: a mail client keeps this on the device in a form it can replay on every poll,
+and a shared mailbox has several members and no single owner, so revoking it must not affect anyone's
+ability to sign in.
+
+### Break-glass
+
+`dovecot/bootstrap.passwd` ships empty and is the *second* passdb, consulted only when the SQL lookup
+returns nothing. That ordering is why an entry for a real mailbox is dangerous: revoking its password
+makes the SQL query return no row, Dovecot falls through to the file, and the address keeps working
+with nothing in the console to say so. Use it to reach the server while Postgres is down, then delete
+the line.
 
 ---
 
