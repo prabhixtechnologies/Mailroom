@@ -11,10 +11,18 @@ dist/
 *.iml
 .DS_Store
 
+# --- Android ---
+# Machine-specific SDK path; every developer's differs.
 local.properties
 .gradle/
+.cxx/
 captures/
 *.apk
 *.aab
+*.jks
 *.keystore
 !debug.keystore
+# Release signing: holds the keystore passwords in cleartext. Losing the keystore means never being
+# able to update the app for existing installs or on Play, so it belongs in a password manager or a
+# secret store — not here, and not in git.
+keystore.properties

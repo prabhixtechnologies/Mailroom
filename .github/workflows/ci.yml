@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  web:
+    name: Web (Vite)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # The sanitiser tests are the ones worth failing a build over: Mailroom renders HTML an attacker
+      # chose, and a regression there is a cross-site scripting hole in a mail client.
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+  android:
+    name: Android (Gradle)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Debug only: the release signing key is not in the repository, so a release build here would
+      # produce an unsigned APK that nothing can install.
+      - name: Assemble debug
+        run: ./gradlew --no-daemon assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mailroom-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
+  image:
+    name: Build and push image
+    needs: [web]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        run: echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push mailroom
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          file: ./web/Dockerfile
+          push: true
+          # Vite inlines these at build time; each must also be declared as an ARG in web/Dockerfile
+          # or it is silently discarded and the image ships with the default.
+          #
+          # VITE_IDENTITY_ISSUER is required rather than optional here, unlike in the consoles: those
+          # still have a password form to fall back on, and Mailroom does not. An image built without
+          # it renders a "not configured" screen and nothing else.
+          build-args: |
+            VITE_API_URL=https://api.prabhixtechnologies.com
+            VITE_IDENTITY_ISSUER=https://api.prabhixtechnologies.com
+            VITE_ONEOPS_URL=https://oneops.prabhixtechnologies.com
+          tags: |
+            prabhixtechnologies/prabhix-mailroom:latest
+            prabhixtechnologies/prabhix-mailroom:${{ steps.meta.outputs.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

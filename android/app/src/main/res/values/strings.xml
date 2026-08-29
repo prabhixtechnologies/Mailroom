@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  app_name is set by resValue in app/build.gradle.kts, next to APP_LABEL, so the launcher name and the
+  device name sent at sign-in cannot drift apart. Declaring it here as well would be a duplicate
+  resource and fail the build.
+-->
+<resources />
