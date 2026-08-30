@@ -42,7 +42,13 @@ export function formatRelative(iso: string): string {
 }
 
 /** The part of an address a person recognises, for a list where the full address does not fit. */
-export function displayName(address: string | null, name: string | null): string {
+// Accepts undefined as well as null: the backend omits null fields entirely rather than sending
+// them as null, so an absent correspondent arrives as undefined and this is the function that has to
+// cope with it.
+export function displayName(
+  address: string | null | undefined,
+  name: string | null | undefined,
+): string {
   if (name && name.trim().length > 0) return name.trim();
   if (!address) return "Unknown sender";
   const at = address.indexOf("@");

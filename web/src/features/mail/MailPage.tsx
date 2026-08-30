@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, LogOut, Menu, PenSquare, RefreshCw } from "lucide-react";
+import { Link } from "react-router";
+import { ExternalLink, Inbox, LogOut, Menu, PenSquare, RefreshCw } from "lucide-react";
 import { LogoMark } from "@/components/LogoMark";
 import { Button } from "@/components/ui/button";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
@@ -111,6 +112,15 @@ export function MailPage() {
         <div className="ml-auto flex items-center gap-1">
           <Button variant="ghost" size="icon" aria-label="Refresh" onClick={refresh}>
             <RefreshCw className={cn("size-4", sidebar.isFetching && "animate-spin")} />
+          </Button>
+          {/* The same threads, seen as work rather than as conversation. Shown to everyone rather than
+              gated on a permission, because the queue itself only lists mailboxes the caller can
+              already read: someone with no shared mailbox sees an empty queue, not a forbidden one. */}
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/queue">
+              <Inbox className="size-4" />
+              <span className="hidden sm:inline">Queue</span>
+            </Link>
           </Button>
           {ONEOPS_URL ? (
             <Button variant="ghost" size="sm" asChild>

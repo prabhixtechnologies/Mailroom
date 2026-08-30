@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/misc";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { CallbackPage } from "@/features/auth/CallbackPage";
 import { SignInPage } from "@/features/auth/SignInPage";
+import { QueuePage } from "@/features/helpdesk/QueuePage";
 import { MailPage } from "@/features/mail/MailPage";
 
 const queryClient = new QueryClient({
@@ -38,8 +39,13 @@ const router = createBrowserRouter([
     element: <Guarded />,
     children: [
       { path: "/", element: <MailPage /> },
+      // The shared-mailbox queue. Routed with the ticket in the path, unlike the mail client, whose
+      // selection lives in component state: a ticket is something people send each other links to,
+      // and a selection held in useState has no URL to send.
+      { path: "/queue", element: <QueuePage /> },
+      { path: "/queue/:threadId", element: <QueuePage /> },
       // Anything else is a link from an older build or a typed URL. Home is a better answer than a
-      // 404 page in an app with one screen.
+      // 404 page.
       { path: "*", element: <Navigate to="/" replace /> },
     ],
   },
