@@ -17,6 +17,14 @@ volumes:
   maillogs:
   rspamd_data:
 
+# The three images here still come from Docker Hub. Everything the platform deploys today pulls
+# from AWS instead — our own images from ECR, official base images from public.ecr.aws — but none
+# of Postfix, Dovecot or Rspamd is a Docker Official Image, so AWS has no mirror to point at.
+#
+# This whole file is behind the `mailserver` profile and is not enabled in production, so nothing
+# here is on a deploy path yet. Before turning the profile on, mirror these three into our registry
+# via deploy/aws/mirror-third-party.ps1, the same way PgBouncer is handled: a mail server that will
+# not restart because Docker Hub rate-limited us is not a mail server.
 services:
   postfix:
     profiles: [mailserver]
