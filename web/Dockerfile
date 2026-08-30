@@ -1,5 +1,10 @@
+# Base images come from AWS's public gallery rather than Docker Hub. These are the same
+# Docker Official Images, mirrored by AWS, and the move takes Docker Hub's anonymous pull
+# limit off the build path: a rate-limited base image fails the build for a reason that has
+# nothing to do with the change being built.
+
 # Build stage
-FROM node:22-alpine AS build
+FROM public.ecr.aws/docker/library/node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci || npm install
@@ -18,7 +23,7 @@ ENV VITE_ONEOPS_URL=$VITE_ONEOPS_URL
 RUN npm run build
 
 # Production stage
-FROM nginx:1.27-alpine
+FROM public.ecr.aws/docker/library/nginx:1.27-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
