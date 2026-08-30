@@ -147,18 +147,32 @@ data class MailMessageSummary(
 data class ThreadSummary(
     val id: String,
     val mailboxId: String,
+    val referenceKey: String? = null,
     val subject: String,
     val status: String? = null,
+    val priority: String? = null,
+    val assigneeUserId: String? = null,
+    val assigneeTeamId: String? = null,
     val customerEmail: String? = null,
     val snippet: String? = null,
+    val messageCount: Int = 0,
+    val unreadCount: Int = 0,
     val hasAttachments: Boolean = false,
     val lastMessageAt: String? = null,
+    val lastMessageDirection: String? = null,
+    val slaDueAt: String? = null,
+    val slaBreachedAt: String? = null,
+    val firstResponseAt: String? = null,
+    val resolvedAt: String? = null,
+    val tags: List<TagRef> = emptyList(),
 )
 
 @Serializable
 data class ThreadDetail(
     val thread: ThreadSummary,
     val messages: List<MailMessageSummary> = emptyList(),
+    val notes: List<TicketNote> = emptyList(),
+    val events: List<TicketEvent> = emptyList(),
 )
 
 @Serializable
@@ -168,4 +182,115 @@ data class ReplyRequest(
     val subject: String? = null,
     val bodyHtml: String,
     val attachmentIds: List<String>? = null,
+)
+
+// -----------------------------------------------------------------------------------------------
+// Shared-mailbox helpdesk. Mirrors ThreadDtos and related DTOs on the backend.
+// -----------------------------------------------------------------------------------------------
+
+@Serializable
+data class TagRef(
+    val id: String,
+    val slug: String,
+    val name: String,
+    val colour: String,
+)
+
+@Serializable
+data class TicketNote(
+    val id: String,
+    val authorUserId: String? = null,
+    val bodyHtml: String,
+    val createdAt: String,
+)
+
+@Serializable
+data class TicketEvent(
+    val eventType: String,
+    val actorUserId: String? = null,
+    val actorLabel: String? = null,
+    val fromValue: String? = null,
+    val toValue: String? = null,
+    val createdAt: String,
+)
+
+@Serializable
+data class TicketPage(
+    val items: List<ThreadSummary> = emptyList(),
+    val nextCursor: String? = null,
+    val hasMore: Boolean = false,
+)
+
+@Serializable
+data class Tag(
+    val id: String,
+    val slug: String,
+    val name: String,
+    val colour: String,
+    val usageCount: Int = 0,
+)
+
+@Serializable
+data class CannedReply(
+    val id: String,
+    val mailboxId: String? = null,
+    val shortcut: String? = null,
+    val title: String,
+    val subject: String? = null,
+    val bodyHtml: String,
+    val usageCount: Long = 0,
+)
+
+@Serializable
+data class HelpdeskMailbox(
+    val id: String,
+    val address: String,
+    val name: String,
+    val kind: String,
+    val status: String,
+    val openThreadCount: Int = 0,
+    val unassignedCount: Int = 0,
+)
+
+@Serializable
+data class MemberSummary(
+    val userId: String,
+    val displayName: String? = null,
+    val email: String? = null,
+)
+
+@Serializable
+data class UpdateThreadRequest(
+    val status: String? = null,
+    val priority: String? = null,
+)
+
+@Serializable
+data class AssignRequest(
+    val userId: String? = null,
+    val teamId: String? = null,
+)
+
+@Serializable
+data class CreateNoteRequest(val bodyHtml: String)
+
+@Serializable
+data class ThreadTagRequest(val tagId: String)
+
+@Serializable
+data class HelpdeskReplyRequest(
+    val replyMode: String? = null,
+    val to: List<String>? = null,
+    val cc: List<String>? = null,
+    val subject: String? = null,
+    val bodyHtml: String,
+    val attachmentIds: List<String>? = null,
+    val cannedReplyId: String? = null,
+)
+
+@Serializable
+data class MemberPage(
+    val items: List<MemberSummary> = emptyList(),
+    val nextCursor: String? = null,
+    val hasMore: Boolean = false,
 )

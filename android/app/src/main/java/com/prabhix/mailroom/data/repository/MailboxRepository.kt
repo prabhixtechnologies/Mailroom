@@ -9,8 +9,8 @@ import com.prabhix.mailroom.data.api.FolderView
 import com.prabhix.mailroom.data.api.MailThreadView
 import com.prabhix.mailroom.data.api.MailboxApi
 import com.prabhix.mailroom.data.api.MailboxSummaryView
+import com.prabhix.mailroom.data.api.HelpdeskReplyRequest
 import com.prabhix.mailroom.data.api.MoveRequest
-import com.prabhix.mailroom.data.api.ReplyRequest
 import com.prabhix.mailroom.data.api.SaveFolderRequest
 import com.prabhix.mailroom.data.api.ThreadApi
 import com.prabhix.mailroom.data.api.ThreadDetail
@@ -59,7 +59,9 @@ class MailboxRepository @Inject constructor(
 
     suspend fun compose(request: ComposeRequest): ComposeResponse = call { mailboxApi.compose(request) }
 
-    suspend fun reply(threadId: String, request: ReplyRequest) = call { threadApi.reply(threadId, request) }
+    suspend fun reply(threadId: String, to: List<String>, bodyHtml: String) = call {
+        threadApi.reply(threadId, HelpdeskReplyRequest(to = to, bodyHtml = bodyHtml))
+    }
 
     private suspend fun <T> call(block: suspend () -> T): T = try {
         block()

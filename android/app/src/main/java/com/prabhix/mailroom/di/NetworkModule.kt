@@ -3,7 +3,9 @@ package com.prabhix.mailroom.di
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.prabhix.mailroom.BuildConfig
 import com.prabhix.mailroom.data.api.AuthApi
+import com.prabhix.mailroom.data.api.HelpdeskApi
 import com.prabhix.mailroom.data.api.MailboxApi
+import com.prabhix.mailroom.data.api.OrganizationApi
 import com.prabhix.mailroom.data.api.ThreadApi
 import com.prabhix.mailroom.data.auth.AuthAuthenticator
 import com.prabhix.mailroom.data.auth.AuthInterceptor
@@ -73,6 +75,9 @@ object NetworkModule {
     @Provides fun authApi(retrofit: Retrofit): AuthApi = retrofit.create(AuthApi::class.java)
     @Provides fun mailboxApi(retrofit: Retrofit): MailboxApi = retrofit.create(MailboxApi::class.java)
     @Provides fun threadApi(retrofit: Retrofit): ThreadApi = retrofit.create(ThreadApi::class.java)
+    @Provides fun helpdeskApi(retrofit: Retrofit): HelpdeskApi = retrofit.create(HelpdeskApi::class.java)
+    @Provides fun organizationApi(retrofit: Retrofit): OrganizationApi =
+        retrofit.create(OrganizationApi::class.java)
 
     private fun String.ensureTrailingSlash(): String = if (endsWith("/")) this else "$this/"
 }

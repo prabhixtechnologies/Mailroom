@@ -416,6 +416,87 @@ export function useReplyToTicket() {
   });
 }
 
+export function useCreateTag() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { name: string; colour?: string; slug?: string }) =>
+      apiRequest("/mail/tags", tagSchema, { body: vars }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: helpdeskKeys.tags }),
+  });
+}
+
+export function useUpdateTag() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { tagId: string; name: string; colour?: string }) =>
+      apiRequest(`/mail/tags/${vars.tagId}`, tagSchema, {
+        method: "PATCH",
+        body: { name: vars.name, colour: vars.colour },
+      }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: helpdeskKeys.tags }),
+  });
+}
+
+export function useDeleteTag() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (tagId: string) =>
+      apiRequestVoid(`/mail/tags/${tagId}`, { method: "DELETE" }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: helpdeskKeys.tags }),
+  });
+}
+
+export function useCreateCannedReply() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: {
+      title: string;
+      bodyHtml: string;
+      mailboxId?: string;
+      shortcut?: string;
+      subject?: string;
+    }) => apiRequest("/mail/canned-replies", cannedReplySchema, { body: vars }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: helpdeskKeys.cannedReplies }),
+  });
+}
+
+export function useUpdateCannedReply() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: {
+      replyId: string;
+      title: string;
+      bodyHtml: string;
+      mailboxId?: string;
+      shortcut?: string;
+      subject?: string;
+    }) =>
+      apiRequest(`/mail/canned-replies/${vars.replyId}`, cannedReplySchema, {
+        method: "PATCH",
+        body: {
+          title: vars.title,
+          bodyHtml: vars.bodyHtml,
+          mailboxId: vars.mailboxId,
+          shortcut: vars.shortcut,
+          subject: vars.subject,
+        },
+      }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: helpdeskKeys.cannedReplies }),
+  });
+}
+
+export function useDeleteCannedReply() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (replyId: string) =>
+      apiRequestVoid(`/mail/canned-replies/${replyId}`, { method: "DELETE" }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: helpdeskKeys.cannedReplies }),
+  });
+}
+
 // -------------------------------------------------------------------------------------------------
 // Presentation helpers
 // -------------------------------------------------------------------------------------------------

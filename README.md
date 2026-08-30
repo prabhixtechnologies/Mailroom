@@ -92,8 +92,9 @@ way to check locally that one sign-in covers them.
 
 ## Deployment
 
-CI pushes `prabhixtechnologies/prabhix-mailroom` on every push to `main`, and uploads a debug APK as a
-build artifact. The Platform repo's compose stack runs that image as the `mailroom` service and Caddy
+CI pushes `029096972251.dkr.ecr.ap-south-1.amazonaws.com/prabhix/prabhix-mailroom` on every push to
+`main`, and uploads a debug APK as a build artifact. Amazon ECR is the only registry; the workflow
+assumes an IAM role through GitHub's OIDC provider, so there is no registry secret to configure. The Platform repo's compose stack runs that image as the `mailroom` service and Caddy
 serves it at `mail.prabhixtechnologies.com`; `../Platform/deploy/deploy.sh` pulls and restarts it
 alongside the consoles.
 

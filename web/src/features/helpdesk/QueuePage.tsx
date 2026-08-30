@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { AlertTriangle, Filter, Inbox, Mail, RefreshCw, Search, X } from "lucide-react";
+import { AlertTriangle, Filter, Inbox, Mail, RefreshCw, Search, Settings, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge, EmptyState, Skeleton } from "@/components/ui/misc";
 import { useAuth } from "@/lib/auth";
+import { PERMISSION_MAILBOX_MANAGE, PERMISSION_THREAD_UPDATE } from "@/lib/mailbox-admin";
 import {
   priorities,
   slaState,
@@ -33,7 +34,14 @@ import { TicketPane } from "./TicketPane";
 export function QueuePage() {
   const { threadId } = useParams<{ threadId?: string }>();
   const navigate = useNavigate();
-  const { me } = useAuth();
+  const { me, permissions } = useAuth();
+
+  // The two settings permissions land on different sections, so the link has to point at one the
+  // caller can actually open rather than always at the mailbox list.
+  const canManageMailboxes = permissions.includes(PERMISSION_MAILBOX_MANAGE);
+  const canManageVocabulary = permissions.includes(PERMISSION_THREAD_UPDATE);
+  const canReachSettings = canManageMailboxes || canManageVocabulary;
+  const settingsHome = canManageMailboxes ? "/settings/mailboxes" : "/settings/mailboxes/tags";
 
   const [mailboxId, setMailboxId] = useState<string>();
   const [status, setStatus] = useState<ThreadStatus | undefined>("OPEN");
@@ -93,6 +101,15 @@ export function QueuePage() {
                 <Mail className="mr-1 inline size-3" />
                 My mail
               </Link>
+              {canReachSettings ? (
+                <Link
+                  to={settingsHome}
+                  className="rounded-md px-2 py-1 text-xs text-text-muted hover:bg-surface-muted"
+                >
+                  <Settings className="mr-1 inline size-3" />
+                  Settings
+                </Link>
+              ) : null}
               <Button
                 variant="ghost"
                 size="icon"

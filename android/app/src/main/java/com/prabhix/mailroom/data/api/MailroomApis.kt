@@ -70,9 +70,61 @@ interface MailboxApi {
  * the two to drift.
  */
 interface ThreadApi {
+    @GET("mail/threads")
+    suspend fun list(
+        @Query("mailboxId") mailboxId: String? = null,
+        @Query("status") status: String? = null,
+        @Query("priority") priority: String? = null,
+        @Query("assigneeUserId") assigneeUserId: String? = null,
+        @Query("tagId") tagId: String? = null,
+        @Query("unreadOnly") unreadOnly: Boolean? = null,
+        @Query("q") q: String? = null,
+        @Query("cursor") cursor: String? = null,
+        @Query("limit") limit: Int? = null,
+    ): TicketPage
+
     @GET("mail/threads/{id}")
     suspend fun detail(@Path("id") id: String): ThreadDetail
 
+    @PATCH("mail/threads/{id}")
+    suspend fun update(@Path("id") id: String, @Body body: UpdateThreadRequest): ThreadSummary
+
     @POST("mail/threads/{id}/reply")
-    suspend fun reply(@Path("id") id: String, @Body body: ReplyRequest): MailMessageSummary
+    suspend fun reply(@Path("id") id: String, @Body body: HelpdeskReplyRequest): MailMessageSummary
+
+    @POST("mail/threads/{id}/assign")
+    suspend fun assign(@Path("id") id: String, @Body body: AssignRequest)
+
+    @POST("mail/threads/{id}/unassign")
+    suspend fun unassign(@Path("id") id: String)
+
+    @POST("mail/threads/{id}/notes")
+    suspend fun addNote(@Path("id") id: String, @Body body: CreateNoteRequest): TicketNote
+
+    @POST("mail/threads/{id}/tags")
+    suspend fun addTag(@Path("id") id: String, @Body body: ThreadTagRequest)
+
+    @DELETE("mail/threads/{id}/tags/{tagId}")
+    suspend fun removeTag(@Path("id") id: String, @Path("tagId") tagId: String)
+}
+
+/** Mailboxes, tags and canned replies for the shared-mailbox queue. */
+interface HelpdeskApi {
+    @GET("mail/mailboxes")
+    suspend fun mailboxes(): List<HelpdeskMailbox>
+
+    @GET("mail/tags")
+    suspend fun tags(): List<Tag>
+
+    @GET("mail/canned-replies")
+    suspend fun cannedReplies(): List<CannedReply>
+}
+
+/** Who a ticket can be assigned to. Requires ORG_MEMBER_READ; callers treat failure as "no picker". */
+interface OrganizationApi {
+    @GET("organizations/{orgId}/members")
+    suspend fun members(
+        @Path("orgId") orgId: String,
+        @Query("limit") limit: Int? = null,
+    ): MemberPage
 }

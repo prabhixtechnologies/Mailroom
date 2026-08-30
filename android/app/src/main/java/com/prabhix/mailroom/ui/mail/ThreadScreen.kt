@@ -36,7 +36,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.prabhix.mailroom.data.api.MailMessageSummary
-import com.prabhix.mailroom.data.api.ReplyRequest
 import com.prabhix.mailroom.data.repository.MailboxRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -99,7 +98,7 @@ class ThreadViewModel @Inject constructor(
         }
         viewModelScope.launch {
             _state.value = _state.value.copy(sending = true, error = null)
-            runCatching { repository.reply(threadId, ReplyRequest(to = to, bodyHtml = textToHtml(body))) }
+            runCatching { repository.reply(threadId, to, textToHtml(body)) }
                 .onSuccess {
                     _state.value = _state.value.copy(sending = false)
                     load(threadId)

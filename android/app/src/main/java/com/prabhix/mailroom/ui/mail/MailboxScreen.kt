@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Report
@@ -82,6 +83,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun MailboxScreen(
     onOpenThread: (String) -> Unit,
+    onOpenQueue: () -> Unit,
     onCompose: () -> Unit,
     onSignOut: () -> Unit,
     viewModel: MailboxViewModel = hiltViewModel(),
@@ -140,6 +142,9 @@ fun MailboxScreen(
                         }
                     },
                     actions = {
+                        IconButton(onClick = onOpenQueue) {
+                            Icon(Icons.Filled.Inbox, contentDescription = "Shared mailbox queue")
+                        }
                         IconButton(onClick = viewModel::refresh) {
                             Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
                         }

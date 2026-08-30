@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { ExternalLink, Inbox, LogOut, Menu, PenSquare, RefreshCw } from "lucide-react";
+import { ExternalLink, Inbox, LogOut, Menu, PenSquare, RefreshCw, Settings } from "lucide-react";
 import { LogoMark } from "@/components/LogoMark";
 import { Button } from "@/components/ui/button";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
+import { PERMISSION_MAILBOX_MANAGE, PERMISSION_THREAD_UPDATE } from "@/lib/mailbox-admin";
 import { ONEOPS_URL } from "@/lib/config";
 import {
   useFolderThreads,
@@ -29,7 +30,7 @@ import { ThreadPane } from "./ThreadPane";
  * should mean, without a route for every thread.
  */
 export function MailPage() {
-  const { logout, me } = useAuth();
+  const { logout, me, permissions } = useAuth();
   const sidebar = useSidebar();
 
   const [selectedMailboxId, setSelectedMailboxId] = useState<string | null>(null);
@@ -122,6 +123,21 @@ export function MailPage() {
               <span className="hidden sm:inline">Queue</span>
             </Link>
           </Button>
+          {permissions.includes(PERMISSION_MAILBOX_MANAGE) ||
+          permissions.includes(PERMISSION_THREAD_UPDATE) ? (
+            <Button variant="ghost" size="sm" asChild>
+              <Link
+                to={
+                  permissions.includes(PERMISSION_MAILBOX_MANAGE)
+                    ? "/settings/mailboxes"
+                    : "/settings/mailboxes/tags"
+                }
+              >
+                <Settings className="size-4" />
+                <span className="hidden sm:inline">Settings</span>
+              </Link>
+            </Button>
+          ) : null}
           {ONEOPS_URL ? (
             <Button variant="ghost" size="sm" asChild>
               <a href={ONEOPS_URL} rel="noopener">

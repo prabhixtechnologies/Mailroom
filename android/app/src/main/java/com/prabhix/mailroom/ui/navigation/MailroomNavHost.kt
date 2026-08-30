@@ -13,6 +13,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.prabhix.mailroom.data.repository.AuthRepository
 import com.prabhix.mailroom.ui.auth.SignInScreen
+import com.prabhix.mailroom.ui.helpdesk.QueueScreen
+import com.prabhix.mailroom.ui.helpdesk.TicketScreen
 import com.prabhix.mailroom.ui.mail.ComposeScreen
 import com.prabhix.mailroom.ui.mail.MailboxScreen
 import com.prabhix.mailroom.ui.mail.ThreadScreen
@@ -23,10 +25,13 @@ import javax.inject.Inject
 private object Route {
     const val SIGN_IN = "sign-in"
     const val MAIL = "mail"
+    const val QUEUE = "queue"
     const val THREAD = "thread/{threadId}"
+    const val TICKET = "ticket/{threadId}"
     const val COMPOSE = "compose"
 
     fun thread(id: String) = "thread/$id"
+    fun ticket(id: String) = "ticket/$id"
 }
 
 /**
@@ -74,6 +79,7 @@ fun MailroomNavHost(
         composable(Route.MAIL) {
             MailboxScreen(
                 onOpenThread = { navController.navigate(Route.thread(it)) },
+                onOpenQueue = { navController.navigate(Route.QUEUE) },
                 onCompose = { navController.navigate(Route.COMPOSE) },
                 onSignOut = {
                     signOutViewModel.signOut { endSession ->
@@ -87,6 +93,21 @@ fun MailroomNavHost(
                     }
                 },
             )
+        }
+
+        composable(Route.QUEUE) {
+            QueueScreen(
+                onOpenTicket = { navController.navigate(Route.ticket(it)) },
+                onBackToMail = { navController.popBackStack() },
+            )
+        }
+
+        composable(
+            Route.TICKET,
+            arguments = listOf(navArgument("threadId") { type = NavType.StringType }),
+        ) { entry ->
+            val threadId = entry.arguments?.getString("threadId").orEmpty()
+            TicketScreen(threadId = threadId, onBack = { navController.popBackStack() })
         }
 
         composable(
