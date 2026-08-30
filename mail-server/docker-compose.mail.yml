@@ -54,10 +54,14 @@ services:
     hostname: ${MAIL_HOSTNAME:-mail.prabhixtechnologies.com}
     restart: unless-stopped
     environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_DB: ${POSTGRES_DB:-prabhix}
-      POSTGRES_USER: ${POSTGRES_USER:-prabhix}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-prabhix}
+      # Follows the same variable as everything else, so the RDS cutover does not leave Dovecot
+      # authenticating against a database nothing else uses. Postfix cannot do this: its pgsql maps
+      # are read by a C client that does no variable expansion, so postfix/pgsql-*.cf have the host
+      # written into them and have to be edited by hand. See deploy/RUNBOOK-rds.md.
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-oneops}
+      POSTGRES_USER: ${POSTGRES_USER:-oneops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oneops}
     volumes:
       - ./dovecot/dovecot.conf:/etc/dovecot/dovecot.conf:ro
       - ./dovecot/conf.d:/etc/dovecot/conf.d:ro

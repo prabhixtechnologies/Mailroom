@@ -182,7 +182,7 @@ Postfix reads live data — no reload needed when mailboxes are provisioned:
 - **Mailboxes:** `mail_mailboxes.address` where `status = 'ACTIVE'`
 - **Aliases:** `mail_aliases.address` → canonical mailbox
 
-See `postfix/pgsql-*.cf` for exact SQL against `V5__mail_core.sql`.
+See `postfix/pgsql-*.cf` for the exact SQL against the mail tables in `V1__baseline.sql`.
 
 ---
 

@@ -1,10 +1,10 @@
 # Postfix pgsql map — domains we accept inbound mail for.
 # Matches mail_domains where the org has chosen self-hosted transport and verified DNS.
 
-user = prabhix
-password = prabhix
+user = oneops
+password = oneops
 hosts = postgres
-dbname = prabhix
+dbname = oneops
 
 query = SELECT 1 FROM mail_domains
         WHERE domain = '%s'
