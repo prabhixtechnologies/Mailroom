@@ -1,0 +1,13 @@
+# Postfix pgsql map — valid mailbox recipients.
+# Returns the Maildir path relative to virtual_mailbox_base (% = full address).
+
+user = oneops
+password = oneops
+hosts = postgres
+dbname = oneops
+
+query = SELECT split_part(address::text, '@', 2) || '/' || split_part(address::text, '@', 1) || '/'
+        FROM mail_mailboxes
+        WHERE address = '%s'
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL

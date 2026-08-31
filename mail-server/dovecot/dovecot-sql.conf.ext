@@ -1,0 +1,44 @@
+# Dovecot's view of mail_mailboxes: who may log in, and where their Maildir is.
+#
+# The password lookup used to be commented out because there was nowhere to read a hash from.
+# Migration V61 added mail_mailboxes.password_hash, written by MailboxPasswordService as BCrypt,
+# which is what Dovecot calls BLF-CRYPT. Provisioning a mailbox is now an API call rather than an
+# edit to dovecot/bootstrap.passwd followed by a container restart.
+#
+# Note which column this is *not*. imap_password_enc holds AES-GCM ciphertext of the credentials for
+# pulling from someone else's IMAP server in EXTERNAL_IMAP mode; it is reversible because the poller
+# has to replay the original password, and Dovecot cannot decrypt it.
+
+driver = pgsql
+
+# Read from the environment rather than hardcoded, so the production password is not in the
+# repository. Dovecot expands $ENV{...} in this file; docker-compose.mail.yml passes them in.
+connect = host=$ENV{POSTGRES_HOST} dbname=$ENV{POSTGRES_DB} user=$ENV{POSTGRES_USER} password=$ENV{POSTGRES_PASSWORD}
+
+# BCrypt. Spring writes a $2a$ prefix and Dovecot's BLF-CRYPT accepts every 2-family variant, so no
+# translation is needed between the two.
+default_pass_scheme = BLF-CRYPT
+
+# password_hash IS NOT NULL is what makes revocation real: MailboxPasswordService nulls the column,
+# and from that moment there is nothing here to authenticate against — no flag to be checked in one
+# code path and missed in another. It also matches the partial index V61 creates.
+password_query = SELECT address AS user, password_hash AS password \
+                 FROM mail_mailboxes \
+                 WHERE address = '%u' \
+                   AND password_hash IS NOT NULL \
+                   AND status = 'ACTIVE' \
+                   AND deleted_at IS NULL
+
+user_query = SELECT split_part(address::text, '@', 2) AS domain,
+                    split_part(address::text, '@', 1) AS user,
+                    'maildir:/var/mail/vhosts/' ||
+                    split_part(address::text, '@', 2) || '/' ||
+                    split_part(address::text, '@', 1) AS home,
+                    1000 AS uid, 1000 AS gid
+             FROM mail_mailboxes
+             WHERE address = '%u'
+               AND status = 'ACTIVE'
+               AND deleted_at IS NULL
+
+iterate_query = SELECT address AS user FROM mail_mailboxes
+                WHERE status = 'ACTIVE' AND deleted_at IS NULL

@@ -1,0 +1,94 @@
+# Self-hosted mail transport — opt-in via --profile mailserver.
+# Requires the base stack (postgres on network "prabhix") to be running first.
+#
+#   docker compose -f docker-compose.yml -f mail-server/docker-compose.mail.yml \
+#     --profile mailserver up -d
+
+name: prabhix-mail
+
+networks:
+  prabhix:
+    external: true
+    name: prabhix
+
+volumes:
+  maildata:
+  mailstate:
+  maillogs:
+  rspamd_data:
+
+# The three images here still come from Docker Hub. Everything the platform deploys today pulls
+# from AWS instead — our own images from ECR, official base images from public.ecr.aws — but none
+# of Postfix, Dovecot or Rspamd is a Docker Official Image, so AWS has no mirror to point at.
+#
+# This whole file is behind the `mailserver` profile and is not enabled in production, so nothing
+# here is on a deploy path yet. Before turning the profile on, mirror these three into our registry
+# via deploy/aws/mirror-third-party.ps1, the same way PgBouncer is handled: a mail server that will
+# not restart because Docker Hub rate-limited us is not a mail server.
+services:
+  postfix:
+    profiles: [mailserver]
+    image: boky/postfix:latest
+    hostname: ${MAIL_HOSTNAME:-mail.prabhixtechnologies.com}
+    restart: unless-stopped
+    depends_on:
+      - dovecot
+      - rspamd
+    environment:
+      # boky/postfix entrypoint merges these into main.cf when set.
+      ALLOWED_SENDER_DOMAINS: ${MAIL_ALLOWED_DOMAINS:-prabhixtechnologies.com}
+      HOSTNAME: ${MAIL_HOSTNAME:-mail.prabhixtechnologies.com}
+      MESSAGE_SIZE_LIMIT: "26214400"
+      # Until AWS unblocks port 25, relay outbound through a smarthost (SES, Sendinblue, etc.).
+      RELAYHOST: ${MAIL_RELAY_HOST:-}
+      RELAYHOST_USERNAME: ${MAIL_RELAY_USER:-}
+      RELAYHOST_PASSWORD: ${MAIL_RELAY_PASSWORD:-}
+    volumes:
+      - ./postfix/main.cf:/etc/postfix/main.cf:ro
+      - ./postfix/master.cf:/etc/postfix/master.cf:ro
+      - ./postfix/pgsql-virtual-mailbox-domains.cf:/etc/postfix/pgsql-virtual-mailbox-domains.cf:ro
+      - ./postfix/pgsql-virtual-mailbox-maps.cf:/etc/postfix/pgsql-virtual-mailbox-maps.cf:ro
+      - ./postfix/pgsql-virtual-alias-maps.cf:/etc/postfix/pgsql-virtual-alias-maps.cf:ro
+      - maillogs:/var/log
+    ports:
+      - "25:25"
+      - "587:587"
+    networks:
+      - prabhix
+
+  dovecot:
+    profiles: [mailserver]
+    image: dovecot/dovecot:2.3.21-alpine
+    hostname: ${MAIL_HOSTNAME:-mail.prabhixtechnologies.com}
+    restart: unless-stopped
+    environment:
+      # Follows the same variable as everything else, so the RDS cutover does not leave Dovecot
+      # authenticating against a database nothing else uses. Postfix cannot do this: its pgsql maps
+      # are read by a C client that does no variable expansion, so postfix/pgsql-*.cf have the host
+      # written into them and have to be edited by hand. See deploy/RUNBOOK-rds.md.
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-oneops}
+      POSTGRES_USER: ${POSTGRES_USER:-oneops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oneops}
+    volumes:
+      - ./dovecot/dovecot.conf:/etc/dovecot/dovecot.conf:ro
+      - ./dovecot/conf.d:/etc/dovecot/conf.d:ro
+      - ./dovecot/dovecot-sql.conf.ext:/etc/dovecot/dovecot-sql.conf.ext:ro
+      - ./dovecot/bootstrap.passwd:/etc/dovecot/bootstrap.passwd:ro
+      - maildata:/var/mail
+      - mailstate:/var/lib/dovecot
+    ports:
+      - "993:993"
+    networks:
+      - prabhix
+
+  rspamd:
+    profiles: [mailserver]
+    image: rspamd/rspamd:3.8
+    hostname: rspamd
+    restart: unless-stopped
+    volumes:
+      - ./rspamd/local.d:/etc/rspamd/local.d:ro
+      - rspamd_data:/var/lib/rspamd
+    networks:
+      - prabhix

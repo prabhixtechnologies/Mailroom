@@ -1,0 +1,16 @@
+# Break-glass IMAP accounts. Deliberately empty.
+#
+# Mailbox passwords live in mail_mailboxes.password_hash and are issued through
+# POST /api/v1/mail/mailboxes/{id}/mail-password, which Dovecot reads via the SQL passdb in
+# 10-auth.conf. This file is the second passdb in that list, consulted only when the SQL lookup
+# returns nothing.
+#
+# That ordering is why an entry here is dangerous for a real mailbox: revoking a mail password nulls
+# password_hash, the SQL query then returns no row, and Dovecot falls through to this file — so a
+# leftover entry for the same address would keep working after being revoked in the console, with
+# nothing in the UI to say so.
+#
+# Use it to reach the server while Postgres is down, then delete the line.
+#
+# Format: user@domain:{BLF-CRYPT}hash
+# Generate: docker exec -it prabhix-mail-dovecot-1 doveadm pw -s BLF-CRYPT

@@ -1,0 +1,14 @@
+# Postfix pgsql map — address aliases that deliver into a mailbox.
+# Returns the canonical mailbox address for LMTP routing.
+
+user = oneops
+password = oneops
+hosts = postgres
+dbname = oneops
+
+query = SELECT m.address::text
+        FROM mail_aliases a
+        JOIN mail_mailboxes m ON m.id = a.mailbox_id
+        WHERE a.address = '%s'
+          AND m.status = 'ACTIVE'
+          AND m.deleted_at IS NULL
