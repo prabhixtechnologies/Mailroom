@@ -23,6 +23,8 @@ reads their own mail in.
 ```
 web/         the browser client — Vite, React 19, Tailwind 4, served by nginx
 android/     com.prabhix.mailroom — one module, one flavor, Compose
+mail-server/ Postfix, Dovecot, Rspamd transport
+backend/     Spring Boot API target (skeleton; mailbox routes still in oneOps — see backend/README.md)
 ```
 
 The two are separate applications rather than one shared core, and they differ where a phone and a
@@ -46,7 +48,9 @@ Identity works as a general provider rather than as the platform's login endpoin
 
 ## The API it talks to
 
-`/api/v1/mailbox` in the platform backend, added by migration V64:
+Today: `/api/v1/mailbox` in the **oneOps** backend (migration V64). A dedicated Mailroom API process
+is scaffolded under `backend/` but not deployed; cutover steps are in `backend/README.md`.
+
 
 | Concern | Endpoint |
 | --- | --- |
