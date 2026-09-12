@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from "react-router";
 import { ArrowLeft, Mail, Settings } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { EmptyState } from "@/components/ui/misc";
 import { useAuth } from "@/lib/auth";
 import { ApiClientError } from "@/lib/api-client";
@@ -92,6 +93,7 @@ function SettingsHeader() {
       <Settings className="size-4 text-text-muted" />
       <span className="text-sm font-semibold">Mail settings</span>
       <div className="ml-auto flex items-center gap-1">
+        <ThemeToggle />
         <Link
           to="/queue"
           className="rounded-md px-2 py-1 text-xs text-text-muted hover:bg-surface-muted"

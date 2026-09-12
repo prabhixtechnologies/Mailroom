@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-router";
 import { Skeleton } from "@/components/ui/misc";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { ThemeProvider } from "@/lib/theme";
 import { CallbackPage } from "@/features/auth/CallbackPage";
 import { SignInPage } from "@/features/auth/SignInPage";
 import { QueuePage } from "@/features/helpdesk/QueuePage";
@@ -82,9 +83,11 @@ const router = createBrowserRouter([
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

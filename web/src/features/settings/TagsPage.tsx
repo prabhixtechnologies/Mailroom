@@ -14,7 +14,7 @@ import {
 import { adminErrorHint } from "./SettingsLayout";
 import { ConfirmDialog } from "./MailboxesPage";
 
-const PRESET_COLOURS = ["#7c3aed", "#22d3ee", "#10b981", "#f59e0b", "#ef4444", "#6366f1"];
+const PRESET_COLOURS = ["#0e7490", "#22d3ee", "#10b981", "#f59e0b", "#ef4444", "#0891b2"];
 
 export function TagsPage() {
   const tags = useTags();

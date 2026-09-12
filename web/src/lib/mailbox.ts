@@ -82,18 +82,6 @@ export const messageSchema = z.object({
 
 export type Message = z.infer<typeof messageSchema>;
 
-/**
- * The helpdesk's thread detail endpoint, which is where the message bodies live.
- *
- * <p>Reused rather than duplicated on the mailbox controller: the messages of a thread are the same
- * messages whichever screen is reading them, and a second endpoint returning the same rows would be one
- * more place for the two to disagree. Notes and events come back too; Mailroom ignores them.
- */
-const threadDetailSchema = z.object({
-  thread: z.unknown(),
-  messages: z.array(messageSchema),
-});
-
 export const draftSchema = z.object({
   id: z.string(),
   threadId: z.string().nullish(),
@@ -139,10 +127,12 @@ export const mailboxKeys = {
   aliases: (mailboxId: string) => ["mailbox", "aliases", mailboxId] as const,
 };
 
+const mailroom = { mailroom: true as const };
+
 export function useSidebar() {
   return useQuery({
     queryKey: mailboxKeys.sidebar,
-    queryFn: () => apiRequest("/mailbox", z.array(mailboxSchema)),
+    queryFn: () => apiRequest("/mailbox", z.array(mailboxSchema), mailroom),
     // Folder counts go stale the moment mail arrives, and a wrong unread count is the single most
     // noticeable thing a mail client can get wrong.
     refetchInterval: 60_000,
@@ -153,7 +143,7 @@ export function useFolderThreads(folderId: string | undefined) {
   return useQuery({
     queryKey: folderId ? mailboxKeys.folder(folderId) : ["mailbox", "folder", "none"],
     queryFn: () =>
-      apiRequest(`/mailbox/folders/${folderId}/threads?limit=100`, z.array(threadSchema)),
+      apiRequest(`/mailbox/folders/${folderId}/threads?limit=100`, z.array(threadSchema), mailroom),
     enabled: !!folderId,
     refetchInterval: 60_000,
   });
@@ -162,17 +152,15 @@ export function useFolderThreads(folderId: string | undefined) {
 export function useStarred() {
   return useQuery({
     queryKey: mailboxKeys.starred,
-    queryFn: () => apiRequest("/mailbox/starred", z.array(threadSchema)),
+    queryFn: () => apiRequest("/mailbox/starred", z.array(threadSchema), mailroom),
   });
 }
 
 export function useThreadMessages(threadId: string | undefined) {
   return useQuery({
     queryKey: threadId ? mailboxKeys.messages(threadId) : ["mailbox", "messages", "none"],
-    queryFn: async () => {
-      const detail = await apiRequest(`/mail/threads/${threadId}`, threadDetailSchema);
-      return detail.messages;
-    },
+    queryFn: () =>
+      apiRequest(`/mailbox/threads/${threadId}/messages`, z.array(messageSchema), mailroom),
     enabled: !!threadId,
   });
 }
@@ -180,14 +168,14 @@ export function useThreadMessages(threadId: string | undefined) {
 export function useDrafts() {
   return useQuery({
     queryKey: mailboxKeys.drafts,
-    queryFn: () => apiRequest("/mailbox/drafts", z.array(draftSchema)),
+    queryFn: () => apiRequest("/mailbox/drafts", z.array(draftSchema), mailroom),
   });
 }
 
 export function useAliases(mailboxId: string | undefined) {
   return useQuery({
     queryKey: mailboxId ? mailboxKeys.aliases(mailboxId) : ["mailbox", "aliases", "none"],
-    queryFn: () => apiRequest(`/mailbox/${mailboxId}/aliases`, z.array(aliasSchema)),
+    queryFn: () => apiRequest(`/mailbox/${mailboxId}/aliases`, z.array(aliasSchema), mailroom),
     enabled: !!mailboxId,
   });
 }
@@ -213,6 +201,7 @@ export function useSetFlags() {
       snoozeUntil?: string;
     }) =>
       apiRequest(`/mailbox/threads/${input.threadId}/flags`, threadSchema, {
+        ...mailroom,
         method: "PATCH",
         body: { read: input.read, starred: input.starred, snoozeUntil: input.snoozeUntil },
       }),
@@ -227,6 +216,7 @@ export function useMoveThreads() {
   return useMutation({
     mutationFn: (input: { folderId: string; threadIds: string[] }) =>
       apiRequest(`/mailbox/folders/${input.folderId}/move`, z.number(), {
+        ...mailroom,
         method: "POST",
         body: { threadIds: input.threadIds },
       }),
@@ -241,6 +231,7 @@ export function useCreateFolder() {
   return useMutation({
     mutationFn: (input: { mailboxId: string; name: string; parentId?: string }) =>
       apiRequest(`/mailbox/${input.mailboxId}/folders`, folderSchema, {
+        ...mailroom,
         method: "POST",
         body: { name: input.name, parentId: input.parentId },
       }),
@@ -255,6 +246,7 @@ export function useRenameFolder() {
   return useMutation({
     mutationFn: (input: { folderId: string; name: string }) =>
       apiRequest(`/mailbox/folders/${input.folderId}`, folderSchema, {
+        ...mailroom,
         method: "PATCH",
         body: { name: input.name },
       }),
@@ -268,7 +260,7 @@ export function useDeleteFolder() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (folderId: string) =>
-      apiRequestVoid(`/mailbox/folders/${folderId}`, { method: "DELETE" }),
+      apiRequestVoid(`/mailbox/folders/${folderId}`, { ...mailroom, method: "DELETE" }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["mailbox"] });
     },
@@ -286,7 +278,7 @@ export function useSaveDraft() {
       bcc?: string[];
       subject?: string;
       bodyHtml?: string;
-    }) => apiRequest("/mailbox/drafts", draftSchema, { method: "PUT", body: input }),
+    }) => apiRequest("/mailbox/drafts", draftSchema, { ...mailroom, method: "PUT", body: input }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: mailboxKeys.drafts });
     },
@@ -297,7 +289,7 @@ export function useDiscardDraft() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (draftId: string) =>
-      apiRequestVoid(`/mailbox/drafts/${draftId}`, { method: "DELETE" }),
+      apiRequestVoid(`/mailbox/drafts/${draftId}`, { ...mailroom, method: "DELETE" }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: mailboxKeys.drafts });
     },
@@ -315,7 +307,12 @@ export function useCompose() {
       subject?: string;
       bodyHtml?: string;
       draftId?: string;
-    }) => apiRequest("/mailbox/compose", composeResponseSchema, { method: "POST", body: input }),
+    }) =>
+      apiRequest("/mailbox/compose", composeResponseSchema, {
+        ...mailroom,
+        method: "POST",
+        body: input,
+      }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["mailbox"] });
     },
@@ -353,6 +350,7 @@ export function useCreateAlias() {
   return useMutation({
     mutationFn: (input: { mailboxId: string; address: string }) =>
       apiRequest(`/mailbox/${input.mailboxId}/aliases`, aliasSchema, {
+        ...mailroom,
         method: "POST",
         body: { address: input.address },
       }),
@@ -366,7 +364,10 @@ export function useDeleteAlias() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { mailboxId: string; aliasId: string }) =>
-      apiRequestVoid(`/mailbox/${input.mailboxId}/aliases/${input.aliasId}`, { method: "DELETE" }),
+      apiRequestVoid(`/mailbox/${input.mailboxId}/aliases/${input.aliasId}`, {
+        ...mailroom,
+        method: "DELETE",
+      }),
     onSuccess: (_data, input) => {
       void queryClient.invalidateQueries({ queryKey: mailboxKeys.aliases(input.mailboxId) });
     },

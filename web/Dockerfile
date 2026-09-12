@@ -15,7 +15,8 @@ COPY . .
 ARG VITE_API_URL=http://localhost:8080
 # Mailroom has no password form, so a blank issuer is not a degraded mode: there is nowhere to sign in
 # at all. The app says so on screen rather than pretending.
-ARG VITE_IDENTITY_ISSUER=
+# Local default matches Infra compose; production overrides.
+ARG VITE_IDENTITY_ISSUER=http://localhost:8081
 ARG VITE_ONEOPS_URL=
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_IDENTITY_ISSUER=$VITE_IDENTITY_ISSUER

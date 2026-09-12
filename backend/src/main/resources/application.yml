@@ -4,6 +4,21 @@ server:
 spring:
   application:
     name: mailroom
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/mailroom}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
 
 management:
   endpoints:
@@ -14,3 +29,17 @@ management:
     health:
       probes:
         enabled: true
+
+mailroom:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5175,http://localhost:5174,http://localhost:5173}
+  security:
+    identity:
+      # Local Identity issuer. Blank disables JWT verification (API will reject authenticated routes).
+      issuer: ${IDENTITY_ISSUER:http://localhost:8081}
+      jwks-uri: ${IDENTITY_JWKS_URI:}
+      jwks-cache-ttl: ${IDENTITY_JWKS_CACHE_TTL:PT10M}
+      jwks-min-refresh-interval: ${IDENTITY_JWKS_MIN_REFRESH:PT30S}
+      # Optional: fill users from Identity /internal/users/lookup. Blank → upsert from JWT claims only.
+      internal-base-url: ${IDENTITY_INTERNAL_URL:http://localhost:8081}
+      service-token: ${IDENTITY_SERVICE_TOKEN:}

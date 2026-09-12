@@ -1,41 +1,92 @@
 # Mailroom backend (extraction)
 
-The mailbox HTTP API and mail schema still live in **oneOps**
-(`oneOps/backend/.../platform/mail`, ~135 Java files, Flyway V64+). Mailroom web/Android talk to
-those endpoints today.
+Personal mailbox API extracted from oneOps (`/api/v1/mailbox`). Helpdesk
+`/api/v1/mail/threads` remains in oneOps.
 
-This directory is the target Spring Boot service. **Nothing here is deployed yet** — do not point
-Caddy or clients at it until the cutover is approved.
+Local only: **port 8083**, no AWS.
 
-## Why a separate service
+## What works (Phase E)
 
-STRATEGY: Mailroom is the mail product end to end. Keeping the mailbox API inside oneOps couples
-personal mail to the operations console release train and widens the blast radius of a mail bug.
+| Method | Path | Notes |
+|--------|------|--------|
+| GET | `/api/v1/mailbox` | Sidebar: mailboxes + folders + counts |
+| GET | `/api/v1/mailbox/folders/{folderId}/threads` | Threads in a folder |
+| GET | `/api/v1/mailbox/threads/{threadId}` | Single thread summary |
+| GET | `/api/v1/mailbox/threads/{threadId}/messages` | Message bodies (new; web no longer needs helpdesk for this) |
+| GET | `/api/v1/mailbox/starred` | Starred threads |
+| GET | `/api/v1/mailbox/{mailboxId}/folders` | Folder list |
 
-## Cutover plan (code first, deploy only with approval)
+Writes (compose, flags, drafts, aliases, folder mutate) return **501** with a TODO until extracted.
 
-1. Stand up this module with Identity JWT verification (same dual-verify / RS256 pattern as
-   MobiStack) and an empty `/actuator/health`.
-2. Move packages in order: `mailbox` + `domain` DTOs used by it → `outbound`/`inbound` as needed →
-   provisioning last. Shared platform types (`User`, org membership) become thin mirrors or internal
-   HTTP calls — same idea as `IdentityUserMirror`.
-3. Copy Flyway mail migrations into this service's schema history; stop applying them from oneOps.
-4. Point Mailroom web/Android `VITE_*` / BuildConfig API base at the new service.
-5. Leave helpdesk (`/mail/threads`…`) in oneOps until a later split — Mailroom README already notes
-   it reuses those rows.
+Auth: Identity **RS256** via JWKS (same pattern as MobiStack / oneOps). Send
+`Authorization: Bearer …` and `X-Prabhix-Org: <uuid>`.
 
-## Local skeleton
+## Local run
+
+### 1. Database
+
+Prefer a dedicated database:
 
 ```bash
-cd backend
-# JDK 25+ when the platform standard applies; otherwise match oneOps.
-mvn -q -DskipTests package
+createdb mailroom
+# or: psql -c "CREATE DATABASE mailroom;"
 ```
 
-Until step 2 lands, this jar only proves the packaging pipeline.
+Defaults in `application.yml`:
 
-## Blocked / approval gates
+- URL: `jdbc:postgresql://localhost:5432/mailroom`
+- User/password: `postgres` / `postgres`
 
-- AWS / host: new container, env secrets, Caddy route (e.g. `mail-api.prabhixtechnologies.com`)
-- Data: RDS role + database `mail` (or dedicated schema) — see existing `mail` DB notes in Infra
-- **Your approval before any production deploy or DNS change**
+Flyway applies `V1__mailbox_read_schema.sql` (schema `mail` + thin `users` /
+`organization_memberships` mirrors).
+
+**Optional — read existing oneOps mail data during extract:**
+
+```bash
+set DB_URL=jdbc:postgresql://localhost:5432/oneops
+set FLYWAY_ENABLED=false
+```
+
+Do not run Mailroom Flyway against oneOps; the mail tables already live there under schema `mail`.
+
+### 2. Identity
+
+Identity must be reachable locally (default issuer `http://localhost:8081`).
+JWKS is loaded from `{issuer}/.well-known/jwks.json`.
+
+Optional: set `IDENTITY_SERVICE_TOKEN` + `IDENTITY_INTERNAL_URL` to mirror users via
+`/internal/users/lookup`. If unset, Mailroom upserts `users` from JWT claims
+(subject, email, name).
+
+If `organization_memberships` is empty, any `X-Prabhix-Org` is accepted (local extract
+escape hatch). Seed a membership row for stricter checks.
+
+### 3. Build and start
+
+```bash
+cd Mailroom/backend
+mvn -q -DskipTests package
+mvn spring-boot:run
+```
+
+Health: `http://localhost:8083/actuator/health`
+
+### 4. Web client
+
+In `Mailroom/web/.env` (see `.env.example`):
+
+```
+VITE_API_URL=http://localhost:8080
+VITE_MAILROOM_API_URL=http://localhost:8083
+VITE_IDENTITY_ISSUER=http://localhost:8081
+```
+
+- Mailbox calls (`/api/v1/mailbox/...`) → Mailroom `:8083`
+- Helpdesk calls (`/api/v1/mail/...`) → oneOps `:8080`
+
+## Still in oneOps
+
+- Helpdesk queue / threads API
+- Inbound (LMTP/IMAP), outbound worker, SES webhooks
+- Domain provisioning, DKIM
+- Team-based mailbox grants (direct user membership only here for now)

@@ -1,13 +1,12 @@
 package com.prabhix.mailroom;
 
+import com.prabhix.mailroom.config.MailroomProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
-/**
- * Mailroom API process. Mailbox routes are not here yet — see {@code README.md} for the extraction
- * order from oneOps. Until then this process only proves packaging and health.
- */
 @SpringBootApplication
+@EnableConfigurationProperties(MailroomProperties.class)
 public class MailroomApplication {
 
     public static void main(String[] args) {

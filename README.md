@@ -24,7 +24,7 @@ reads their own mail in.
 web/         the browser client — Vite, React 19, Tailwind 4, served by nginx
 android/     com.prabhix.mailroom — one module, one flavor, Compose
 mail-server/ Postfix, Dovecot, Rspamd transport
-backend/     Spring Boot API target (skeleton; mailbox routes still in oneOps — see backend/README.md)
+backend/     Spring Boot API on :8083 — mailbox read path extracted (writes still TODO / 501)
 ```
 
 The two are separate applications rather than one shared core, and they differ where a phone and a
@@ -48,8 +48,9 @@ Identity works as a general provider rather than as the platform's login endpoin
 
 ## The API it talks to
 
-Today: `/api/v1/mailbox` in the **oneOps** backend (migration V64). A dedicated Mailroom API process
-is scaffolded under `backend/` but not deployed; cutover steps are in `backend/README.md`.
+**Local extract (Phase E):** mailbox reads go to **Mailroom** `http://localhost:8083`
+(`VITE_MAILROOM_API_URL`). Helpdesk `/mail/threads` stays on oneOps (`VITE_API_URL`, :8080).
+See `backend/README.md` for run notes.
 
 
 | Concern | Endpoint |

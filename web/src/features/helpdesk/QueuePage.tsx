@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { AlertTriangle, Filter, Inbox, Mail, RefreshCw, Search, Settings, X } from "lucide-react";
 
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge, EmptyState, Skeleton } from "@/components/ui/misc";
@@ -94,6 +95,7 @@ export function QueuePage() {
               ) : null}
             </div>
             <div className="flex items-center gap-1">
+              <ThemeToggle />
               <Link
                 to="/"
                 className="rounded-md px-2 py-1 text-xs text-text-muted hover:bg-surface-muted"

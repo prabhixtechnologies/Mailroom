@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { ExternalLink, Inbox, LogOut, Menu, PenSquare, RefreshCw, Settings } from "lucide-react";
 import { LogoMark } from "@/components/LogoMark";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -111,6 +112,7 @@ export function MailPage() {
         <span className="text-sm font-semibold">Mailroom</span>
 
         <div className="ml-auto flex items-center gap-1">
+          <ThemeToggle />
           <Button variant="ghost" size="icon" aria-label="Refresh" onClick={refresh}>
             <RefreshCw className={cn("size-4", sidebar.isFetching && "animate-spin")} />
           </Button>
