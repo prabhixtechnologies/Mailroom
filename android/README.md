@@ -15,7 +15,7 @@ cp ../../Platform/mobile/android/local.properties local.properties   # or write 
 
 Needs the platform backend on `:8080` and Identity on `:8081`, both reachable from the emulator as
 `10.0.2.2`. Those are baked into `BuildConfig` by `app/build.gradle.kts`; the release build points at
-`api.prabhixtechnologies.com` and `id.prabhixtechnologies.com`.
+`api.prabhixtechnologies.com` for both the API and Identity (until `id.` has DNS and a Caddy host).
 
 ## Sign-in
 

@@ -68,7 +68,8 @@ android {
                 "proguard-rules.pro",
             )
             buildConfigField("String", "API_BASE_URL", "\"https://api.prabhixtechnologies.com/api/v1\"")
-            buildConfigField("String", "IDENTITY_ISSUER", "\"https://id.prabhixtechnologies.com\"")
+            // Same public issuer as web. id.prabhixtechnologies.com is not served yet.
+                buildConfigField("String", "IDENTITY_ISSUER", "\"https://api.prabhixtechnologies.com\"")
         }
         debug {
             applicationIdSuffix = ".debug"
