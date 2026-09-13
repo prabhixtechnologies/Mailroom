@@ -1,7 +1,9 @@
 import { useEffect } from "react";
+import { useLocation } from "react-router";
 import { LogoMark } from "@/components/LogoMark";
 import { Skeleton } from "@/components/ui/misc";
 import { beginLogin, isOidcEnabled } from "@/lib/oidc";
+import { safeAppPath } from "@/lib/safePath";
 
 /**
  * There is no sign-in form here, and there is not going to be one.
@@ -11,17 +13,19 @@ import { beginLogin, isOidcEnabled } from "@/lib/oidc";
  * cross-site scripting hole in Mailroom cannot steal a password, because Mailroom never receives one.
  */
 export function SignInPage() {
+  const location = useLocation();
   useEffect(() => {
     if (isOidcEnabled()) {
-      void beginLogin(window.location.pathname === "/sign-in" ? "/" : undefined);
+      const from = safeAppPath((location.state as { from?: string } | null)?.from);
+      void beginLogin(from);
     }
-  }, []);
+  }, [location.state]);
 
   if (!isOidcEnabled()) {
     return (
       <div className="mx-auto max-w-md space-y-4 p-8 text-center">
         <LogoMark className="mx-auto size-12" />
-        <h1 className="text-lg font-semibold">Mailroom is not configured</h1>
+        <h1 className="font-display text-lg font-semibold tracking-tight">Mailroom is not configured</h1>
         <p className="text-sm text-text-muted">
           This build has no identity provider set, so there is nowhere to sign in. Whoever deployed it
           needs to build it with an identity issuer.

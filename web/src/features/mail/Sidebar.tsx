@@ -51,7 +51,7 @@ export function Sidebar({
         type="button"
         onClick={onSelectStarred}
         className={cn(
-          "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+          "flex min-h-11 items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
           starredSelected ? "bg-primary/15 text-primary" : "hover:bg-surface-muted",
         )}
       >
@@ -124,7 +124,7 @@ function MailboxSection({
         <Button
           variant="ghost"
           size="icon"
-          className="size-6"
+          className="size-11"
           title={`New folder in ${mailbox.name}`}
           aria-label={`New folder in ${mailbox.name}`}
           onClick={() => setAdding((v) => !v)}
@@ -199,7 +199,7 @@ function FolderRow({
       onClick={onSelect}
       aria-current={selected ? "page" : undefined}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md py-1.5 pr-2 text-sm transition-colors",
+        "flex min-h-11 w-full items-center gap-2 rounded-md py-1.5 pr-2 text-sm transition-colors",
         depth === 0 ? "pl-2" : "pl-7",
         selected ? "bg-primary/15 text-primary" : "hover:bg-surface-muted",
       )}

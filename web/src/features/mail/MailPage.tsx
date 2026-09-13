@@ -18,6 +18,7 @@ import {
   type Thread,
 } from "@/lib/mailbox";
 import { cn } from "@/lib/utils";
+import { SkipLink } from "@/components/SkipLink";
 import { ComposeDialog } from "./ComposeDialog";
 import { Sidebar } from "./Sidebar";
 import { ThreadList } from "./ThreadList";
@@ -98,7 +99,8 @@ export function MailPage() {
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden">
-      <header className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+      <SkipLink />
+      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-3 py-2">
         <Button
           variant="ghost"
           size="icon"
@@ -109,7 +111,7 @@ export function MailPage() {
           <Menu className="size-4" />
         </Button>
         <LogoMark className="size-7 shrink-0" />
-        <span className="text-sm font-semibold">Mailroom</span>
+        <span className="font-display text-base font-semibold tracking-tight">Mailroom</span>
 
         <div className="ml-auto flex items-center gap-1">
           <ThemeToggle />
@@ -120,7 +122,7 @@ export function MailPage() {
               gated on a permission, because the queue itself only lists mailboxes the caller can
               already read: someone with no shared mailbox sees an empty queue, not a forbidden one. */}
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/queue">
+            <Link to="/queue" aria-label="Queue">
               <Inbox className="size-4" />
               <span className="hidden sm:inline">Queue</span>
             </Link>
@@ -134,6 +136,7 @@ export function MailPage() {
                     ? "/settings/mailboxes"
                     : "/settings/mailboxes/tags"
                 }
+                aria-label="Settings"
               >
                 <Settings className="size-4" />
                 <span className="hidden sm:inline">Settings</span>
@@ -142,20 +145,20 @@ export function MailPage() {
           ) : null}
           {ONEOPS_URL ? (
             <Button variant="ghost" size="sm" asChild>
-              <a href={ONEOPS_URL} rel="noopener">
+              <a href={ONEOPS_URL} rel="noopener" aria-label="OneOps">
                 <ExternalLink className="size-4" />
                 <span className="hidden sm:inline">OneOps</span>
               </a>
             </Button>
           ) : null}
-          <Button variant="ghost" size="sm" onClick={() => void logout()}>
+          <Button variant="ghost" size="sm" aria-label="Sign out" onClick={() => void logout()}>
             <LogOut className="size-4" />
             <span className="hidden sm:inline">{me?.email ?? "Sign out"}</span>
           </Button>
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1" id="main-content" tabIndex={-1}>
         <aside
           className={cn(
             "w-64 shrink-0 border-r border-border bg-surface-muted/30",
@@ -200,9 +203,9 @@ export function MailPage() {
           )}
         >
           <div className="sticky top-0 z-10 border-b border-border bg-surface/95 px-3 py-2 backdrop-blur">
-            <h2 className="text-sm font-semibold">
+            <h1 className="font-display text-base font-semibold tracking-tight">
               {starredView ? "Starred" : activeFolder?.name ?? "Mail"}
-            </h2>
+            </h1>
             {!starredView && activeMailbox ? (
               <p className="truncate text-xs text-text-muted">{activeMailbox.address}</p>
             ) : null}

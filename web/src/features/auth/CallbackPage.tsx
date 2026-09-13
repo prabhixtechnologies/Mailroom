@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/misc";
 import { useAuth } from "@/lib/auth";
 import { beginLogin, completeLogin } from "@/lib/oidc";
+import { safeAppPath } from "@/lib/safePath";
 
 /** Where Identity sends the browser back to, carrying the authorization code. */
 export function CallbackPage() {
@@ -25,7 +26,7 @@ export function CallbackPage() {
       try {
         const { tokens, returnTo } = await completeLogin(searchParams);
         await loginWithTokens(tokens.accessToken, tokens.idToken);
-        navigate(returnTo, { replace: true });
+        navigate(safeAppPath(returnTo), { replace: true });
       } catch (err) {
         setMessage(err instanceof Error ? err.message : "Sign-in did not complete.");
       }

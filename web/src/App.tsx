@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-router";
+import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation } from "react-router";
 import { Skeleton } from "@/components/ui/misc";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { ThemeProvider } from "@/lib/theme";
@@ -32,6 +32,7 @@ const queryClient = new QueryClient({
 
 function Guarded() {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -40,7 +41,11 @@ function Guarded() {
       </div>
     );
   }
-  return isAuthenticated ? <Outlet /> : <Navigate to="/sign-in" replace />;
+  return isAuthenticated ? (
+    <Outlet />
+  ) : (
+    <Navigate to="/sign-in" replace state={{ from: `${location.pathname}${location.search}` }} />
+  );
 }
 
 const router = createBrowserRouter([

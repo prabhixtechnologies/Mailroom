@@ -4,6 +4,7 @@ import { AlertTriangle, Inbox, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge, EmptyState, Skeleton } from "@/components/ui/misc";
+import * as Dialog from "@radix-ui/react-dialog";
 import { getApiErrorMessage } from "@/lib/api-client";
 import {
   useAdminMailboxes,
@@ -188,19 +189,29 @@ export function ConfirmDialog({
   onConfirm: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4">
-      <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 shadow-xl">
-        <h3 className="text-sm font-semibold">{title}</h3>
-        {hint ? <p className="mt-2 text-xs text-text-muted">{hint}</p> : null}
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={onCancel} disabled={busy}>
-            Cancel
-          </Button>
-          <Button variant="destructive" size="sm" onClick={onConfirm} disabled={busy}>
-            {busy ? "Deleting…" : "Delete"}
-          </Button>
-        </div>
-      </div>
-    </div>
+    <Dialog.Root
+      open
+      onOpenChange={(next) => {
+        if (!next && !busy) onCancel();
+      }}
+    >
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-ink/50" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(24rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-5">
+          <Dialog.Title className="text-sm font-semibold">{title}</Dialog.Title>
+          <Dialog.Description className={hint ? "mt-2 text-xs text-text-muted" : "sr-only"}>
+            {hint ?? "This cannot be undone."}
+          </Dialog.Description>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={onCancel} disabled={busy}>
+              Cancel
+            </Button>
+            <Button variant="destructive" size="sm" onClick={onConfirm} disabled={busy}>
+              {busy ? "Deleting…" : "Delete"}
+            </Button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

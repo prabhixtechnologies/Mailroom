@@ -23,6 +23,7 @@ import {
 } from "@/lib/helpdesk";
 import { cn } from "@/lib/utils";
 import { TicketPane } from "./TicketPane";
+import { SkipLink } from "@/components/SkipLink";
 
 /**
  * The shared-mailbox queue: what work is outstanding, and whose it is.
@@ -82,11 +83,19 @@ export function QueuePage() {
 
   return (
     <div className="flex h-full min-h-0">
-      <section className="flex w-full min-w-0 flex-col border-r border-border md:w-[420px] md:shrink-0">
+      <SkipLink />
+      <section
+        id="main-content"
+        tabIndex={-1}
+        className={cn(
+          "min-w-0 flex-col border-r border-border",
+          threadId ? "hidden md:flex md:w-[420px] md:shrink-0" : "flex w-full md:w-[420px] md:shrink-0",
+        )}
+      >
         <header className="flex flex-col gap-3 border-b border-border px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-semibold">Queue</h1>
+              <h1 className="font-display text-base font-semibold tracking-tight">Queue</h1>
               {activeFilterCount > 0 ? (
                 <Badge tone="muted">
                   <Filter className="mr-1 size-3" />
@@ -238,7 +247,7 @@ export function QueuePage() {
           ) : (
             <ul>
               {rows.map((ticket) => (
-                <li key={ticket.id}>
+                <li key={ticket.id} className="scan-row">
                   <TicketRow
                     ticket={ticket}
                     selected={ticket.id === threadId}
@@ -264,7 +273,7 @@ export function QueuePage() {
         </div>
       </section>
 
-      <section className="hidden min-w-0 flex-1 md:flex">
+      <section className={cn("min-w-0 flex-1", threadId ? "flex" : "hidden md:flex")}>
         {threadId ? (
           <TicketPane threadId={threadId} onClose={() => navigate("/queue")} />
         ) : (
@@ -314,8 +323,8 @@ function FilterSelect({
 const priorityTone: Record<Priority, string> = {
   LOW: "text-text-muted",
   NORMAL: "text-text-muted",
-  HIGH: "text-amber-400",
-  URGENT: "text-red-400",
+  HIGH: "text-warning",
+  URGENT: "text-destructive",
 };
 
 function TicketRow({
@@ -386,9 +395,9 @@ function TicketRow({
             className={cn(
               "text-[11px]",
               sla.tone === "breached"
-                ? "text-red-400"
+                ? "text-destructive"
                 : sla.tone === "due-soon"
-                  ? "text-amber-400"
+                  ? "text-warning"
                   : "text-text-muted",
             )}
           >

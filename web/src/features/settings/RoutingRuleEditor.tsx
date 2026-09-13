@@ -255,6 +255,7 @@ export function RoutingRuleEditor({
                 <Input
                   className="mt-2"
                   placeholder="Header name (e.g. X-Priority)"
+                  aria-label="Header name"
                   value={c.headerName}
                   onChange={(e) => updateCondition(c.id, { headerName: e.target.value })}
                 />
@@ -341,6 +342,7 @@ function ConditionValueInput({
     return (
       <Textarea
         placeholder="One value per line"
+        aria-label="Match any of these values, one per line"
         value={row.listValues.join("\n")}
         onChange={(e) =>
           onChange({ listValues: e.target.value.split("\n"), rawValue: "" })
@@ -352,6 +354,7 @@ function ConditionValueInput({
   return (
     <Input
       placeholder={row.field === "SPAM_SCORE" ? "Numeric value" : "Value"}
+      aria-label={row.field === "SPAM_SCORE" ? "Spam score" : "Condition value"}
       value={row.rawValue}
       onChange={(e) => onChange({ rawValue: e.target.value })}
     />
@@ -484,6 +487,7 @@ function ActionValueInput({
         type="number"
         min={1}
         placeholder="Minutes"
+        aria-label="SLA minutes"
         value={row.rawValue}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -492,6 +496,7 @@ function ActionValueInput({
   return (
     <Textarea
       placeholder="Auto-reply body"
+      aria-label="Auto-reply body"
       value={row.rawValue}
       onChange={(e) => onChange(e.target.value)}
       rows={3}

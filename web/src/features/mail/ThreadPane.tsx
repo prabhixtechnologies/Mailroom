@@ -63,9 +63,9 @@ export function ThreadPane({
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex items-start gap-2 border-b border-border p-4">
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-base font-semibold" title={thread.subject}>
+          <h2 className="truncate font-display text-lg font-semibold tracking-tight" title={thread.subject}>
             {thread.subject}
-          </h1>
+          </h2>
           <p className="truncate text-xs text-text-muted">
             {thread.correspondent ?? "Unknown sender"}
             {thread.messageCount > 1 ? ` · ${thread.messageCount} messages` : ""}
@@ -247,7 +247,7 @@ function ReplyBox({ threadId }: { threadId: string }) {
       />
       {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
       <div className="mt-2 flex items-center gap-2">
-        <Button size="sm" onClick={send} disabled={reply.isPending || body.trim().length === 0}>
+        <Button onClick={send} disabled={reply.isPending || body.trim().length === 0}>
           <Send className="size-4" />
           {reply.isPending ? "Sending…" : "Send"}
         </Button>

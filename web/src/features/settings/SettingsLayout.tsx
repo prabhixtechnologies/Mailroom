@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { ApiClientError } from "@/lib/api-client";
 import { PERMISSION_MAILBOX_MANAGE, PERMISSION_THREAD_UPDATE } from "@/lib/mailbox-admin";
 import { cn } from "@/lib/utils";
+import { SkipLink } from "@/components/SkipLink";
 
 /**
  * Shell for mailbox administration: a sidebar of sections and a content area.
@@ -47,8 +48,9 @@ export function SettingsLayout() {
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden">
+      <SkipLink />
       <SettingsHeader />
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <aside className="hidden w-52 shrink-0 border-r border-border bg-surface-muted/30 p-3 md:block">
           <nav className="space-y-0.5">
             {nav.map((item) => {
@@ -72,7 +74,28 @@ export function SettingsLayout() {
             })}
           </nav>
         </aside>
-        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+        <nav className="flex gap-1 overflow-x-auto border-b border-border px-3 py-2 md:hidden">
+          {nav.map((item) => {
+            const active = item.exact
+              ? location.pathname === item.to
+              : location.pathname.startsWith(item.to);
+            return (
+              <Link
+                key={`m-${item.to}`}
+                to={item.to}
+                className={cn(
+                  "shrink-0 rounded-md px-3 py-2 text-sm transition-colors min-h-11 inline-flex items-center",
+                  active
+                    ? "bg-primary/15 font-medium text-primary"
+                    : "text-text-muted hover:bg-surface-muted hover:text-text",
+                )}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <main id="main-content" tabIndex={-1} className="min-h-0 min-w-0 flex-1 overflow-y-auto">
           <Outlet />
         </main>
       </div>
@@ -82,10 +105,10 @@ export function SettingsLayout() {
 
 function SettingsHeader() {
   return (
-    <header className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+    <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-3 py-2">
       <Link
         to="/"
-        className="rounded-md p-1.5 text-text-muted hover:bg-surface-muted hover:text-text"
+        className="inline-flex size-11 items-center justify-center rounded-md text-text-muted hover:bg-surface-muted hover:text-text"
         aria-label="Back to mail"
       >
         <ArrowLeft className="size-4" />

@@ -57,6 +57,7 @@ export function ComposeDialog({
     if (!hasContent) return;
 
     const timer = setTimeout(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
       saveDraft.mutate(
         {
           mailboxId,

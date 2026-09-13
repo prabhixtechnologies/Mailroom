@@ -129,6 +129,20 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
@@ -165,4 +179,10 @@
 
 .email-html table {
   max-width: 100%;
+}
+
+/* Skip layout for off-screen inbox/queue rows. Paging already caps how many exist. */
+.scan-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 72px;
 }

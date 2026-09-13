@@ -127,7 +127,7 @@ export function MailboxRoutingSection() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-7"
+                  className="size-11"
                   aria-label="Move up"
                   disabled={idx === 0 || updateRule.isPending}
                   onClick={() => void moveRule(rule, "up")}
@@ -137,7 +137,7 @@ export function MailboxRoutingSection() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-7"
+                  className="size-11"
                   aria-label="Move down"
                   disabled={idx === rules.length - 1 || updateRule.isPending}
                   onClick={() => void moveRule(rule, "down")}

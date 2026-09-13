@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import {
   AlertTriangle,
   ArrowDownLeft,
@@ -37,7 +37,7 @@ import {
   type ThreadStatus,
   type TicketEvent,
 } from "@/lib/helpdesk";
-import { sanitizeEmailHtml } from "@/lib/sanitize";
+import { hardenLinks, sanitizeEmailHtml } from "@/lib/sanitize";
 import { cn, initials } from "@/lib/utils";
 
 /**
@@ -166,7 +166,7 @@ export function TicketPane({
                 update.mutateAsync({ threadId, status: e.target.value as ThreadStatus }),
               )
             }
-            className="rounded-md border border-border bg-surface px-2 py-1 text-xs"
+            className="min-h-11 rounded-md border border-border bg-surface px-3 py-2 text-sm"
           >
             {workflowStatuses.map((s) => (
               <option key={s} value={s}>
@@ -189,7 +189,7 @@ export function TicketPane({
                 update.mutateAsync({ threadId, priority: e.target.value as Priority }),
               )
             }
-            className="rounded-md border border-border bg-surface px-2 py-1 text-xs"
+            className="min-h-11 rounded-md border border-border bg-surface px-3 py-2 text-sm"
           >
             {priorities.map((p) => (
               <option key={p} value={p}>
@@ -210,7 +210,7 @@ export function TicketPane({
                     : unassign.mutateAsync({ threadId }),
                 )
               }
-              className="rounded-md border border-border bg-surface px-2 py-1 text-xs"
+              className="min-h-11 rounded-md border border-border bg-surface px-3 py-2 text-sm"
             >
               <option value="">Unassigned</option>
               {members.data.items.map((m) => (
@@ -243,9 +243,9 @@ export function TicketPane({
               className={cn(
                 "text-xs",
                 sla.tone === "breached"
-                  ? "text-red-400"
+                  ? "text-destructive"
                   : sla.tone === "due-soon"
-                    ? "text-amber-400"
+                    ? "text-warning"
                     : "text-text-muted",
               )}
             >
@@ -309,7 +309,7 @@ export function TicketPane({
         </div>
 
         {actionError ? (
-          <p role="alert" className="mt-2 text-xs text-red-400">
+          <p role="alert" className="mt-2 text-xs text-destructive">
             {actionError}
           </p>
         ) : null}
@@ -343,11 +343,9 @@ export function TicketPane({
                   </span>
                 </div>
                 {m.bodyHtml ? (
-                  <div
+                  <SanitizedMailHtml
                     className="prose-sm max-w-none text-sm [&_a]:text-primary [&_a]:underline"
-                    // Sanitised, never raw: this is attacker-controlled HTML from an inbound email,
-                    // and rendering it as-is hands over the reader's session. See lib/sanitize.ts.
-                    dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(m.bodyHtml) }}
+                    html={m.bodyHtml}
                   />
                 ) : (
                   <p className="whitespace-pre-wrap text-sm">{m.bodyText ?? "(empty message)"}</p>
@@ -362,16 +360,16 @@ export function TicketPane({
                 key={entry.note.id}
                 className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4"
               >
-                <div className="mb-1 flex items-center gap-2 text-xs text-amber-400">
+                <div className="mb-1 flex items-center gap-2 text-xs text-warning">
                   <StickyNote className="size-3" />
                   <span className="font-medium">Internal note</span>
                   <span className="ml-auto text-text-muted">
                     {new Date(entry.note.createdAt).toLocaleString()}
                   </span>
                 </div>
-                <div
+                <SanitizedMailHtml
                   className="prose-sm max-w-none text-sm"
-                  dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(entry.note.bodyHtml) }}
+                  html={entry.note.bodyHtml}
                 />
               </article>
             );
@@ -412,7 +410,7 @@ export function TicketPane({
                   setReplyBody((body) => (body ? `${body}\n\n${chosen.bodyHtml}` : chosen.bodyHtml));
                   setUsedCannedReplyId(chosen.id);
                 }}
-                className="rounded-md border border-border bg-surface px-2 py-1 text-xs"
+                className="min-h-11 rounded-md border border-border bg-surface px-3 py-2 text-sm"
               >
                 <option value="">Insert a canned reply…</option>
                 {cannedReplies.data?.map((c) => (
@@ -549,3 +547,19 @@ function describeEvent(event: TicketEvent): string {
       return event.eventType.toLowerCase().replace(/_/g, " ");
   }
 }
+
+function SanitizedMailHtml({ html, className }: { html: string; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (ref.current) hardenLinks(ref.current);
+  }, [html]);
+  return (
+    <div
+      ref={ref}
+      className={className}
+      // Sanitised, never raw: this is attacker-controlled HTML from an inbound email.
+      dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(html) }}
+    />
+  );
+}
+

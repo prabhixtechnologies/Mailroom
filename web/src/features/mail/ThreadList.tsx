@@ -37,10 +37,10 @@ export function ThreadList({
   return (
     <ul className="divide-y divide-border">
       {threads.map((thread) => (
-        <li key={thread.id}>
+        <li key={thread.id} className="scan-row">
           <div
             className={cn(
-              "group flex w-full items-start gap-2 px-3 py-2.5 text-left transition-colors",
+              "group flex min-h-11 w-full items-start gap-2 px-3 py-3 text-left transition-colors",
               thread.id === selectedThreadId ? "bg-primary/10" : "hover:bg-surface-muted",
             )}
           >
