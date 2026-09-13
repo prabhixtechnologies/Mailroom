@@ -14,11 +14,10 @@ export default defineConfig({
     rolldownOptions: {
       output: {
         codeSplitting: {
-          includeDependenciesRecursively: false,
           groups: [
             {
               name: "vendor-react",
-              test: /node_modules[\\/](react-dom|react-router|scheduler)[\\/]|node_modules[\\/]react[\\/]/,
+              test: /node_modules[\\/](react-dom|react-router|scheduler|@radix-ui|@floating-ui|cmdk)[\\/]|node_modules[\\/]react[\\/]/,
               priority: 30,
             },
             {

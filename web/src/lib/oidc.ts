@@ -23,6 +23,9 @@ const CLIENT_ID = "prabhix-mailroom";
 const VERIFIER_KEY = "pbx_pkce_verifier";
 const STATE_KEY = "pbx_oauth_state";
 const RETURN_KEY = "pbx_oauth_return_to";
+// Survives a reload: /connect/logout needs id_token_hint, and a memory-only ref is empty after
+// refresh — which made sign-out hit Identity with 400 and leave the session cookie alive.
+const ID_TOKEN_KEY = "pbx_id_token";
 
 export function isOidcEnabled(): boolean {
   return IDENTITY_ISSUER.length > 0;
@@ -141,19 +144,38 @@ export async function completeLogin(search: URLSearchParams): Promise<{
 }
 
 /**
+ * Remembers the id token from a completed sign-in, so sign-out has something to present after a reload.
+ */
+export function rememberIdToken(idToken?: string): void {
+  if (idToken) sessionStorage.setItem(ID_TOKEN_KEY, idToken);
+}
+
+/**
  * Ends the session at the provider, not only here.
  *
  * <p>Clearing local state alone would leave the identity session cookie in place, so the next
  * `/authorize` returns a code immediately and the person appears to be signed straight back in — which
  * reads as a broken sign-out button rather than the security hole it is on a shared machine.
+ *
+ * <p>{@code /connect/logout} requires {@code id_token_hint}. Without one it answers 400 and does
+ * nothing. When this tab never saw an id token (SSO via another product's cookie, or a lost
+ * sessionStorage), fall back to Identity's hosted {@code /logout}, which clears the session cookie.
  */
 export function beginLogout(idToken?: string): void {
-  const params = new URLSearchParams({
-    post_logout_redirect_uri: `${window.location.origin}/`,
-    client_id: CLIENT_ID,
-  });
-  if (idToken) params.set("id_token_hint", idToken);
-  window.location.assign(`${IDENTITY_ISSUER}/connect/logout?${params.toString()}`);
+  const hint = idToken || sessionStorage.getItem(ID_TOKEN_KEY) || undefined;
+  sessionStorage.removeItem(ID_TOKEN_KEY);
+
+  if (hint) {
+    const params = new URLSearchParams({
+      client_id: CLIENT_ID,
+      id_token_hint: hint,
+      post_logout_redirect_uri: `${window.location.origin}/`,
+    });
+    window.location.assign(`${IDENTITY_ISSUER}/connect/logout?${params.toString()}`);
+    return;
+  }
+
+  window.location.assign(`${IDENTITY_ISSUER}/logout`);
 }
 
 function describeOauthError(code: string): string {

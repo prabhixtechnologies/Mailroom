@@ -62,9 +62,9 @@ export function SettingsLayout() {
                   key={item.to}
                   to={item.to}
                   className={cn(
-                    "block rounded-md px-3 py-2 text-sm transition-colors",
+                    "flex min-h-11 items-center rounded-md px-3 py-2 text-sm transition-colors",
                     active
-                      ? "bg-primary/15 font-medium text-primary"
+                      ? "bg-primary font-medium text-primary-foreground"
                       : "text-text-muted hover:bg-surface-muted hover:text-text",
                   )}
                 >
@@ -86,7 +86,7 @@ export function SettingsLayout() {
                 className={cn(
                   "shrink-0 rounded-md px-3 py-2 text-sm transition-colors min-h-11 inline-flex items-center",
                   active
-                    ? "bg-primary/15 font-medium text-primary"
+                    ? "bg-primary font-medium text-primary-foreground"
                     : "text-text-muted hover:bg-surface-muted hover:text-text",
                 )}
               >
@@ -119,7 +119,7 @@ function SettingsHeader() {
         <ThemeToggle />
         <Link
           to="/queue"
-          className="rounded-md px-2 py-1 text-xs text-text-muted hover:bg-surface-muted"
+          className="inline-flex min-h-11 items-center rounded-md px-3 text-sm text-text-muted hover:bg-surface-muted"
         >
           <Mail className="mr-1 inline size-3" />
           Queue

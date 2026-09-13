@@ -98,7 +98,7 @@ export function MailPage() {
   };
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden">
+    <div className="flex h-[100dvh] min-w-0 flex-col overflow-x-clip overflow-y-hidden">
       <SkipLink />
       <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-3 py-2">
         <Button
@@ -201,9 +201,11 @@ export function MailPage() {
             "min-h-0 w-full shrink-0 overflow-y-auto border-r border-border scrollbar-thin md:w-96",
             selectedThread ? "hidden md:block" : "block",
           )}
+          tabIndex={0}
+          aria-label="Message list"
         >
           <div className="sticky top-0 z-10 border-b border-border bg-surface/95 px-3 py-2 backdrop-blur">
-            <h1 className="font-display text-base font-semibold tracking-tight">
+            <h1 className="font-display text-xl font-semibold tracking-tight">
               {starredView ? "Starred" : activeFolder?.name ?? "Mail"}
             </h1>
             {!starredView && activeMailbox ? (

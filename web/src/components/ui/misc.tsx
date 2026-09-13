@@ -37,16 +37,19 @@ export function EmptyState({
   icon,
   title,
   hint,
+  action,
 }: {
   icon?: React.ReactNode;
   title: string;
   hint?: string;
+  action?: React.ReactNode;
 }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
       {icon ? <div className="text-text-muted opacity-60">{icon}</div> : null}
       <p className="text-sm font-medium">{title}</p>
       {hint ? <p className="max-w-xs text-xs text-text-muted">{hint}</p> : null}
+      {action ? <div className="mt-2">{action}</div> : null}
     </div>
   );
 }

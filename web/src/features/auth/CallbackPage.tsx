@@ -4,7 +4,7 @@ import { LogoMark } from "@/components/LogoMark";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/misc";
 import { useAuth } from "@/lib/auth";
-import { beginLogin, completeLogin } from "@/lib/oidc";
+import { beginLogin, completeLogin, rememberIdToken } from "@/lib/oidc";
 import { safeAppPath } from "@/lib/safePath";
 
 /** Where Identity sends the browser back to, carrying the authorization code. */
@@ -25,6 +25,8 @@ export function CallbackPage() {
     void (async () => {
       try {
         const { tokens, returnTo } = await completeLogin(searchParams);
+        // Before loadSession: a slow /auth/me must not leave a signed-in tab with no id token for logout.
+        rememberIdToken(tokens.idToken);
         await loginWithTokens(tokens.accessToken, tokens.idToken);
         navigate(safeAppPath(returnTo), { replace: true });
       } catch (err) {

@@ -82,7 +82,7 @@ export function QueuePage() {
     (mineOnly ? 1 : 0);
 
   return (
-    <div className="flex h-full min-h-0">
+    <div className="flex h-full min-h-0 min-w-0 overflow-x-clip">
       <SkipLink />
       <section
         id="main-content"
@@ -95,7 +95,7 @@ export function QueuePage() {
         <header className="flex flex-col gap-3 border-b border-border px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <h1 className="font-display text-base font-semibold tracking-tight">Queue</h1>
+              <h1 className="font-display text-xl font-semibold tracking-tight">Queue</h1>
               {activeFilterCount > 0 ? (
                 <Badge tone="muted">
                   <Filter className="mr-1 size-3" />
@@ -107,7 +107,7 @@ export function QueuePage() {
               <ThemeToggle />
               <Link
                 to="/"
-                className="rounded-md px-2 py-1 text-xs text-text-muted hover:bg-surface-muted"
+                className="inline-flex min-h-11 items-center rounded-md px-3 text-sm text-text-muted hover:bg-surface-muted"
               >
                 <Mail className="mr-1 inline size-3" />
                 My mail
@@ -115,7 +115,7 @@ export function QueuePage() {
               {canReachSettings ? (
                 <Link
                   to={settingsHome}
-                  className="rounded-md px-2 py-1 text-xs text-text-muted hover:bg-surface-muted"
+                  className="inline-flex min-h-11 items-center rounded-md px-3 text-sm text-text-muted hover:bg-surface-muted"
                 >
                   <Settings className="mr-1 inline size-3" />
                   Settings
@@ -212,7 +212,7 @@ export function QueuePage() {
               className={cn(
                 "rounded-md border px-2 py-1 text-xs transition-colors",
                 mineOnly
-                  ? "border-primary bg-primary/15 text-primary"
+                  ? "border-primary bg-primary text-primary-foreground"
                   : "border-border text-text-muted hover:bg-surface-muted",
               )}
             >
@@ -221,7 +221,7 @@ export function QueuePage() {
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto" tabIndex={0} aria-label="Ticket list">
           {tickets.isPending ? (
             <div className="space-y-2 p-3">
               {[0, 1, 2, 3, 4].map((i) => (
@@ -307,7 +307,7 @@ function FilterSelect({
       className={cn(
         "rounded-md border px-2 py-1 text-xs transition-colors",
         value
-          ? "border-primary bg-primary/15 text-primary"
+          ? "border-primary bg-primary text-primary-foreground"
           : "border-border bg-surface text-text-muted hover:bg-surface-muted",
       )}
     >

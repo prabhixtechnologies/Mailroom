@@ -1,11 +1,40 @@
 import { render } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import axe from "axe-core";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { LogoMark } from "@/components/LogoMark";
 import { SignInPage } from "@/features/auth/SignInPage";
 import { SkipLink } from "@/components/SkipLink";
+import { SettingsLayout } from "@/features/settings/SettingsLayout";
+import { ThemeProvider } from "@/lib/theme";
+import { PERMISSION_MAILBOX_MANAGE } from "@/lib/mailbox-admin";
+
+vi.mock("@/lib/auth", () => ({
+  useAuth: vi.fn(),
+}));
+
+import { useAuth } from "@/lib/auth";
+
+const mockedUseAuth = vi.mocked(useAuth);
+
+beforeAll(() => {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+      dispatchEvent() {
+        return false;
+      },
+    }),
+  });
+});
 
 const RULES = ["button-name", "link-name", "image-alt"];
 
@@ -28,6 +57,13 @@ describe("Mailroom accessibility", () => {
     expect(getByRole("link", { name: "Skip to main content" })).toHaveAttribute("href", "#main-content");
   });
 
+  it("reaches the skip link from the keyboard", async () => {
+    const user = userEvent.setup();
+    render(<SkipLink />);
+    await user.tab();
+    expect(document.activeElement).toHaveTextContent("Skip to main content");
+  });
+
   it("names the sign-in surface", async () => {
     const { container, getByRole } = render(
       <MemoryRouter>
@@ -35,6 +71,23 @@ describe("Mailroom accessibility", () => {
       </MemoryRouter>,
     );
     expect(getByRole("heading")).toBeInTheDocument();
+    expect(await violations(container)).toEqual([]);
+  });
+
+  it("names settings navigation at 44px targets", async () => {
+    mockedUseAuth.mockReturnValue({
+      permissions: [PERMISSION_MAILBOX_MANAGE],
+    } as ReturnType<typeof useAuth>);
+
+    const { container, getByRole } = render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={["/settings/mailboxes"]}>
+          <SettingsLayout />
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+    expect(getByRole("link", { name: "Queue" })).toBeInTheDocument();
+    expect(container.querySelectorAll('a[href="/settings/mailboxes"]').length).toBeGreaterThan(0);
     expect(await violations(container)).toEqual([]);
   });
 });
