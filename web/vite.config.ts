@@ -7,28 +7,41 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return;
-          if (
-            id.includes("react-dom") ||
-            id.includes("/react/") ||
-            id.includes("react-router") ||
-            id.includes("scheduler")
-          ) {
-            return "vendor-react";
-          }
-          if (id.includes("@tanstack/react-query") || id.includes("@tanstack/query-core")) {
-            return "vendor-query";
-          }
-          if (id.includes("dompurify")) return "vendor-dompurify";
-          if (id.includes("lucide-react")) return "vendor-icons";
-          if (id.includes("/zod/") || id.endsWith("/zod")) return "vendor-zod";
+        codeSplitting: {
+          includeDependenciesRecursively: false,
+          groups: [
+            {
+              name: "vendor-react",
+              test: /node_modules[\\/](react-dom|react-router|scheduler)[\\/]|node_modules[\\/]react[\\/]/,
+              priority: 30,
+            },
+            {
+              name: "vendor-query",
+              test: /node_modules[\\/]@tanstack[\\/](react-query|query-core)/,
+              priority: 25,
+            },
+            {
+              name: "vendor-dompurify",
+              test: /node_modules[\\/]dompurify/,
+              priority: 21,
+            },
+            {
+              name: "vendor-icons",
+              test: /node_modules[\\/]lucide-react/,
+              priority: 20,
+            },
+            {
+              name: "vendor-zod",
+              test: /node_modules[\\/]zod/,
+              priority: 18,
+            },
+          ],
         },
       },
     },

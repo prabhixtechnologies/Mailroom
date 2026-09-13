@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The launcher background. Deliberately the brand indigo rather than the operator apps' violet,
-         so three Prabhix icons on one home screen are told apart at a glance. -->
-    <color name="ic_launcher_background">#4F46E5</color>
-    <color name="brand_primary">#4F46E5</color>
+    <!-- Teal field: Mailroom shares the Prabhix Technologies mark with OneOps;
+         the stacked-M MobiStack icon is what tells the three launchers apart. -->
+    <color name="ic_launcher_background">#0E7490</color>
+    <color name="brand_primary">#0E7490</color>
     <color name="brand_accent">#22D3EE</color>
 </resources>
