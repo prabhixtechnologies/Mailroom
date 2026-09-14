@@ -1,5 +1,5 @@
 import { z, ZodError } from "zod";
-import { API_V1, MAILROOM_API_V1 } from "./config";
+import { API_V1 } from "./config";
 
 export const apiErrorSchema = z.object({
   code: z.string(),
@@ -30,8 +30,6 @@ export interface RequestOptions {
   signal?: AbortSignal;
   skipAuth?: boolean;
   skipOrg?: boolean;
-  /** When true, call Mailroom (:8083 locally) instead of oneOps. */
-  mailroom?: boolean;
 }
 
 let getAccessToken: () => string | null = () => null;
@@ -115,8 +113,7 @@ export async function apiRequest<T>(
   schema: { parse: (data: unknown) => T },
   options: RequestOptions = {},
 ): Promise<T> {
-  const base = options.mailroom ? MAILROOM_API_V1 : API_V1;
-  const url = path.startsWith("http") ? path : `${base}${path}`;
+  const url = path.startsWith("http") ? path : `${API_V1}${path}`;
 
   const execute = async (retried: boolean): Promise<T> => {
     const hasJsonBody = options.body !== undefined;
