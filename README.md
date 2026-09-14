@@ -63,8 +63,9 @@ One host: the oneOps backend (`VITE_API_URL`; `http://localhost:8080` locally,
 
 | Concern | Endpoint |
 | --- | --- |
-| Sidebar — mailboxes with folders and unread counts | `GET /mailbox` |
+| Sidebar — mailboxes with folders and unread counts | `GET /mailbox` (add `?mode=company` for Company mail) |
 | Threads in a folder | `GET /mailbox/folders/{id}/threads` |
+| Message bodies | `GET /mailbox/threads/{id}/messages` |
 | Read, starred, snoozed | `PATCH /mailbox/threads/{id}/flags` |
 | File into a folder | `POST /mailbox/folders/{id}/move` |
 | Folders | `POST /mailbox/{mailboxId}/folders`, `PATCH` and `DELETE /mailbox/folders/{id}` |
@@ -72,11 +73,9 @@ One host: the oneOps backend (`VITE_API_URL`; `http://localhost:8080` locally,
 | Send a new message | `POST /mailbox/compose` |
 | Extra addresses | `GET`, `POST`, `DELETE /mailbox/{mailboxId}/aliases` |
 
-| Company mail (holders of `MAIL_READ_ALL` only) | `GET /mailbox?scope=organization` |
-
-Message bodies come from `GET /mailbox/threads/{id}/messages`, and replies from
-`POST /mail/threads/{id}/reply`. Those are the same rows the helpdesk reads, and a second copy of
-them would be one more place for the two to disagree.
+Message bodies are `GET /mailbox/threads/{id}/messages`; replies are `POST /mail/threads/{id}/reply`.
+Those are the same rows the helpdesk reads, and a second copy of them would be one more place for
+the two to disagree.
 
 Deleting a folder does not delete its mail: the threads move to the inbox. A reply to an archived
 thread brings the thread back; a message to a thread in Spam leaves it there.
@@ -86,9 +85,10 @@ thread brings the thread back; a message to a thread in Spam leaves it there.
 Postfix, Dovecot and Rspamd live in `mail-server/` here. Mailroom talks to the mailbox API and never
 to IMAP directly — the API owns the IMAP session, so a phone on a train is not holding one open.
 
-Outbound goes via SES, because AWS blocks outbound 25 from EC2. Inbound for hosted domains is the open
-decision in `../Infra/deploy/RUNBOOK-mail.md`: the MX still points at the registrar, so a hosted
-address cannot yet receive internet mail. See `../Infra/docs/MAIL.md` for the design.
+Outbound goes via SES, because AWS blocks outbound 25 from EC2. Inbound for hosted domains is
+decided in `../Infra/deploy/RUNBOOK-mail.md`: SES receiving in ap-south-1 is the intended path
+once ingest is wired; MX still points at GoDaddy until then. See `../Infra/docs/MAIL.md` for the
+design.
 
 ## Running it locally
 

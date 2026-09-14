@@ -19,6 +19,7 @@ import {
   useCreateFolder,
   type Folder,
   type FolderKind,
+  type MailboxMode,
   type MailboxSummary,
 } from "@/lib/mailbox";
 
@@ -34,19 +35,53 @@ const KIND_ICONS: Record<FolderKind, typeof Inbox> = {
 
 export function Sidebar({
   mailboxes,
+  mode,
+  canReadCompany,
+  onSelectMode,
   selectedFolderId,
   onSelectFolder,
   starredSelected,
   onSelectStarred,
 }: {
   mailboxes: MailboxSummary[];
+  mode: MailboxMode;
+  canReadCompany: boolean;
+  onSelectMode: (mode: MailboxMode) => void;
   selectedFolderId: string | null;
   onSelectFolder: (mailbox: MailboxSummary, folder: Folder) => void;
   starredSelected: boolean;
   onSelectStarred: () => void;
 }) {
+  const groups =
+    mode === "company" ? groupByOwner(mailboxes) : [{ label: null, mailboxes }];
+
   return (
     <nav className="flex h-full flex-col gap-1 overflow-y-auto p-2 scrollbar-thin">
+      {canReadCompany ? (
+        <div className="mb-1 grid grid-cols-2 gap-1 rounded-md bg-surface-muted p-1">
+          <button
+            type="button"
+            onClick={() => onSelectMode("mine")}
+            className={cn(
+              "min-h-9 rounded px-2 text-xs font-medium",
+              mode === "mine" ? "bg-surface text-text shadow-sm" : "text-text-muted hover:text-text",
+            )}
+          >
+            My mail
+          </button>
+          <button
+            type="button"
+            onClick={() => onSelectMode("company")}
+            className={cn(
+              "min-h-9 rounded px-2 text-xs font-medium",
+              mode === "company" ? "bg-surface text-text shadow-sm" : "text-text-muted hover:text-text",
+            )}
+          >
+            Company mail
+          </button>
+        </div>
+      ) : null}
+
       <button
         type="button"
         onClick={onSelectStarred}
@@ -59,24 +94,53 @@ export function Sidebar({
         <span>Starred</span>
       </button>
 
-      {mailboxes.map((mailbox) => (
-        <MailboxSection
-          key={mailbox.id}
-          mailbox={mailbox}
-          selectedFolderId={selectedFolderId}
-          onSelectFolder={onSelectFolder}
-        />
+      {groups.map((group) => (
+        <div key={group.label ?? "mine"}>
+          {group.label ? (
+            <p className="mt-3 px-2 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+              {group.label}
+            </p>
+          ) : null}
+          {group.mailboxes.map((mailbox) => (
+            <MailboxSection
+              key={mailbox.id}
+              mailbox={mailbox}
+              companyMode={mode === "company"}
+              selectedFolderId={selectedFolderId}
+              onSelectFolder={onSelectFolder}
+            />
+          ))}
+        </div>
       ))}
     </nav>
   );
 }
 
+function groupByOwner(mailboxes: MailboxSummary[]) {
+  const order: string[] = [];
+  const byKey = new Map<string, { label: string; mailboxes: MailboxSummary[] }>();
+  for (const mailbox of mailboxes) {
+    const key = mailbox.ownerUserId ?? "shared";
+    const label = mailbox.ownerUserId ? (mailbox.ownerLabel ?? mailbox.name) : "Shared inboxes";
+    let group = byKey.get(key);
+    if (!group) {
+      group = { label, mailboxes: [] };
+      byKey.set(key, group);
+      order.push(key);
+    }
+    group.mailboxes.push(mailbox);
+  }
+  return order.map((key) => byKey.get(key)!);
+}
+
 function MailboxSection({
   mailbox,
+  companyMode,
   selectedFolderId,
   onSelectFolder,
 }: {
   mailbox: MailboxSummary;
+  companyMode: boolean;
   selectedFolderId: string | null;
   onSelectFolder: (mailbox: MailboxSummary, folder: Folder) => void;
 }) {
@@ -118,7 +182,7 @@ function MailboxSection({
             <ChevronRight className="size-3 shrink-0" />
           )}
           <span className="truncate" title={mailbox.address}>
-            {mailbox.mine ? "My mail" : mailbox.name}
+            {companyMode ? mailbox.name : mailbox.mine ? "My mail" : mailbox.name}
           </span>
         </button>
         <Button

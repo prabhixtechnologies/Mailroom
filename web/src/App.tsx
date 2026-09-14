@@ -5,18 +5,8 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { ThemeProvider } from "@/lib/theme";
 import { CallbackPage } from "@/features/auth/CallbackPage";
 import { SignInPage } from "@/features/auth/SignInPage";
-import { QueuePage } from "@/features/helpdesk/QueuePage";
 import { MailPage } from "@/features/mail/MailPage";
-import { CannedRepliesPage } from "@/features/settings/CannedRepliesPage";
-import {
-  MailboxDetailLayout,
-  MailboxGeneralSection,
-  MailboxMembersSection,
-  MailboxRoutingSection,
-} from "@/features/settings/MailboxDetailLayout";
-import { MailboxesPage } from "@/features/settings/MailboxesPage";
-import { SettingsLayout } from "@/features/settings/SettingsLayout";
-import { TagsPage } from "@/features/settings/TagsPage";
+import { PersonalSettingsPage } from "@/features/settings/PersonalSettingsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,31 +45,10 @@ const router = createBrowserRouter([
     element: <Guarded />,
     children: [
       { path: "/", element: <MailPage /> },
-      // The shared-mailbox queue. Routed with the ticket in the path, unlike the mail client, whose
-      // selection lives in component state: a ticket is something people send each other links to,
-      // and a selection held in useState has no URL to send.
-      { path: "/queue", element: <QueuePage /> },
-      { path: "/queue/:threadId", element: <QueuePage /> },
-      {
-        path: "/settings/mailboxes",
-        element: <SettingsLayout />,
-        children: [
-          { index: true, element: <MailboxesPage /> },
-          { path: "tags", element: <TagsPage /> },
-          { path: "canned-replies", element: <CannedRepliesPage /> },
-          {
-            path: ":mailboxId",
-            element: <MailboxDetailLayout />,
-            children: [
-              { index: true, element: <MailboxGeneralSection /> },
-              { path: "members", element: <MailboxMembersSection /> },
-              { path: "routing", element: <MailboxRoutingSection /> },
-            ],
-          },
-        ],
-      },
+      { path: "/settings", element: <PersonalSettingsPage /> },
       // Anything else is a link from an older build or a typed URL. Home is a better answer than a
-      // 404 page.
+      // 404 page. Helpdesk queue and mail admin used to live here; they are OneOps /inbox and
+      // Settings → Mail now.
       { path: "*", element: <Navigate to="/" replace /> },
     ],
   },

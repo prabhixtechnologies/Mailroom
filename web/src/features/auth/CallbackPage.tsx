@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from "react-router";
 import { LogoMark } from "@/components/LogoMark";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/misc";
+import { beginLogin, completeLogin, rememberIdToken } from "@prabhix/oidc-client";
 import { useAuth } from "@/lib/auth";
-import { beginLogin, completeLogin, rememberIdToken } from "@/lib/oidc";
+import "@/lib/oidc-config";
 import { safeAppPath } from "@/lib/safePath";
 
 /** Where Identity sends the browser back to, carrying the authorization code. */

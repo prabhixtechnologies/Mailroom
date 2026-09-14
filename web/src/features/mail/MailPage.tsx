@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { ExternalLink, Inbox, LogOut, Menu, PenSquare, RefreshCw, Settings } from "lucide-react";
+import { ExternalLink, LogOut, Menu, PenSquare, RefreshCw, Settings } from "lucide-react";
 import { LogoMark } from "@/components/LogoMark";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
-import { PERMISSION_MAILBOX_MANAGE, PERMISSION_THREAD_UPDATE } from "@/lib/mailbox-admin";
 import { ONEOPS_URL } from "@/lib/config";
 import {
   useFolderThreads,
   useSidebar,
   useStarred,
   type Folder,
+  type MailboxMode,
   type MailboxSummary,
   type Thread,
 } from "@/lib/mailbox";
@@ -33,7 +33,9 @@ import { ThreadPane } from "./ThreadPane";
  */
 export function MailPage() {
   const { logout, me, permissions } = useAuth();
-  const sidebar = useSidebar();
+  const canReadCompany = permissions.includes("MAIL_READ_ALL");
+  const [mailMode, setMailMode] = useState<MailboxMode>("mine");
+  const sidebar = useSidebar(canReadCompany ? mailMode : "mine");
 
   const [selectedMailboxId, setSelectedMailboxId] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -43,6 +45,7 @@ export function MailPage() {
   const [navOpen, setNavOpen] = useState(false);
 
   const mailboxes = sidebar.data ?? [];
+  const activeMode: MailboxMode = canReadCompany ? mailMode : "mine";
 
   // Lands in the inbox of the person's own mailbox, falling back to the first mailbox they can see.
   // Somebody who is only a member of shared queues still gets an inbox rather than an empty screen.
@@ -83,6 +86,14 @@ export function MailPage() {
     if (fresh && fresh !== selectedThread) setSelectedThread(fresh);
   }, [threads, selectedThread]);
 
+  const selectMode = (mode: MailboxMode) => {
+    setMailMode(mode);
+    setSelectedMailboxId(null);
+    setSelectedFolderId(null);
+    setStarredView(false);
+    setSelectedThread(null);
+  };
+
   const selectFolder = (mailbox: MailboxSummary, folder: Folder) => {
     setStarredView(false);
     setSelectedMailboxId(mailbox.id);
@@ -118,36 +129,17 @@ export function MailPage() {
           <Button variant="ghost" size="icon" aria-label="Refresh" onClick={refresh}>
             <RefreshCw className={cn("size-4", sidebar.isFetching && "animate-spin")} />
           </Button>
-          {/* The same threads, seen as work rather than as conversation. Shown to everyone rather than
-              gated on a permission, because the queue itself only lists mailboxes the caller can
-              already read: someone with no shared mailbox sees an empty queue, not a forbidden one. */}
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/queue" aria-label="Queue">
-              <Inbox className="size-4" />
-              <span className="hidden sm:inline">Queue</span>
+            <Link to="/settings" aria-label="Settings">
+              <Settings className="size-4" />
+              <span className="hidden sm:inline">Settings</span>
             </Link>
           </Button>
-          {permissions.includes(PERMISSION_MAILBOX_MANAGE) ||
-          permissions.includes(PERMISSION_THREAD_UPDATE) ? (
-            <Button variant="ghost" size="sm" asChild>
-              <Link
-                to={
-                  permissions.includes(PERMISSION_MAILBOX_MANAGE)
-                    ? "/settings/mailboxes"
-                    : "/settings/mailboxes/tags"
-                }
-                aria-label="Settings"
-              >
-                <Settings className="size-4" />
-                <span className="hidden sm:inline">Settings</span>
-              </Link>
-            </Button>
-          ) : null}
           {ONEOPS_URL ? (
             <Button variant="ghost" size="sm" asChild>
-              <a href={ONEOPS_URL} rel="noopener" aria-label="OneOps">
+              <a href={`${ONEOPS_URL}/inbox`} rel="noopener" aria-label="OneOps inbox">
                 <ExternalLink className="size-4" />
-                <span className="hidden sm:inline">OneOps</span>
+                <span className="hidden sm:inline">Inbox</span>
               </a>
             </Button>
           ) : null}
@@ -182,6 +174,9 @@ export function MailPage() {
               </div>
               <Sidebar
                 mailboxes={mailboxes}
+                mode={activeMode}
+                canReadCompany={canReadCompany}
+                onSelectMode={selectMode}
                 selectedFolderId={starredView ? null : selectedFolderId}
                 onSelectFolder={selectFolder}
                 starredSelected={starredView}
@@ -206,7 +201,11 @@ export function MailPage() {
         >
           <div className="sticky top-0 z-10 border-b border-border bg-surface/95 px-3 py-2 backdrop-blur">
             <h1 className="font-display text-xl font-semibold tracking-tight">
-              {starredView ? "Starred" : activeFolder?.name ?? "Mail"}
+              {starredView
+                ? "Starred"
+                : activeMode === "company"
+                  ? (activeFolder?.name ?? "Company mail")
+                  : (activeFolder?.name ?? "Mail")}
             </h1>
             {!starredView && activeMailbox ? (
               <p className="truncate text-xs text-text-muted">{activeMailbox.address}</p>
@@ -223,7 +222,11 @@ export function MailPage() {
           ) : !sidebar.isLoading && mailboxes.length === 0 ? (
             <EmptyState
               title="No mailboxes yet"
-              hint="Somebody with mailbox admin needs to give you an address before there is mail to read."
+              hint={
+                activeMode === "company"
+                  ? "This organization has no mailboxes yet."
+                  : "Somebody with mailbox admin needs to give you an address before there is mail to read."
+              }
             />
           ) : (
             <ThreadList

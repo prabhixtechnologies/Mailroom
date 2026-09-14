@@ -11,6 +11,10 @@ dist/
 *.iml
 .DS_Store
 
+# Break-glass IMAP file. Empty in git; a leftover hash here would keep working after
+# the console revoked the mailbox password (Dovecot falls through to this passdb).
+mail-server/dovecot/bootstrap.passwd
+
 # --- Android ---
 # Machine-specific SDK path; every developer's differs.
 local.properties

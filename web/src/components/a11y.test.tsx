@@ -7,12 +7,21 @@ import "@testing-library/jest-dom/vitest";
 import { LogoMark } from "@/components/LogoMark";
 import { SignInPage } from "@/features/auth/SignInPage";
 import { SkipLink } from "@/components/SkipLink";
-import { SettingsLayout } from "@/features/settings/SettingsLayout";
+import { PersonalSettingsPage } from "@/features/settings/PersonalSettingsPage";
 import { ThemeProvider } from "@/lib/theme";
-import { PERMISSION_MAILBOX_MANAGE } from "@/lib/mailbox-admin";
 
 vi.mock("@/lib/auth", () => ({
   useAuth: vi.fn(),
+}));
+
+vi.mock("@/lib/mailbox", () => ({
+  useSidebar: () => ({ isPending: false, data: [] }),
+  useAliases: () => ({ isPending: false, data: [] }),
+  useCreateAlias: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useDeleteAlias: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useCreateFolder: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useRenameFolder: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useDeleteFolder: () => ({ isPending: false, mutateAsync: vi.fn() }),
 }));
 
 import { useAuth } from "@/lib/auth";
@@ -74,20 +83,20 @@ describe("Mailroom accessibility", () => {
     expect(await violations(container)).toEqual([]);
   });
 
-  it("names settings navigation at 44px targets", async () => {
+  it("names personal settings navigation at 44px targets", async () => {
     mockedUseAuth.mockReturnValue({
-      permissions: [PERMISSION_MAILBOX_MANAGE],
+      permissions: [],
+      me: { email: "you@example.com" },
     } as ReturnType<typeof useAuth>);
 
     const { container, getByRole } = render(
       <ThemeProvider>
-        <MemoryRouter initialEntries={["/settings/mailboxes"]}>
-          <SettingsLayout />
+        <MemoryRouter initialEntries={["/settings"]}>
+          <PersonalSettingsPage />
         </MemoryRouter>
       </ThemeProvider>,
     );
-    expect(getByRole("link", { name: "Queue" })).toBeInTheDocument();
-    expect(container.querySelectorAll('a[href="/settings/mailboxes"]').length).toBeGreaterThan(0);
+    expect(getByRole("link", { name: "Back to mail" })).toHaveAttribute("href", "/");
     expect(await violations(container)).toEqual([]);
   });
 });

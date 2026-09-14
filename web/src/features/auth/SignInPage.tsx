@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useLocation } from "react-router";
 import { LogoMark } from "@/components/LogoMark";
 import { SkipLink } from "@/components/SkipLink";
-import { beginLogin, isOidcEnabled } from "@/lib/oidc";
+import { beginLogin, isOidcEnabled } from "@prabhix/oidc-client";
+import "@/lib/oidc-config";
 import { safeAppPath } from "@/lib/safePath";
 
 /**

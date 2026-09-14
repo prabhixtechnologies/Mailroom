@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Teal field: Mailroom shares the Prabhix Technologies mark with OneOps;
-         the stacked-M MobiStack icon is what tells the three launchers apart. -->
-    <color name="ic_launcher_background">#0E7490</color>
-    <color name="brand_primary">#0E7490</color>
-    <color name="brand_accent">#22D3EE</color>
-</resources>

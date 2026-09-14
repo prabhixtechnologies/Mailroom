@@ -42,6 +42,8 @@ export const mailboxSchema = z.object({
   name: z.string(),
   kind: z.enum(["SHARED", "PERSONAL", "SYSTEM"]),
   mine: z.boolean(),
+  ownerUserId: z.string().nullish(),
+  ownerLabel: z.string().nullish(),
   folders: z.array(folderSchema),
 });
 
@@ -117,8 +119,10 @@ export type Alias = z.infer<typeof aliasSchema>;
 // Queries
 // -------------------------------------------------------------------------------------------------
 
+export type MailboxMode = "mine" | "company";
+
 export const mailboxKeys = {
-  sidebar: ["mailbox", "sidebar"] as const,
+  sidebar: (mode: MailboxMode = "mine") => ["mailbox", "sidebar", mode] as const,
   folder: (folderId: string) => ["mailbox", "folder", folderId] as const,
   thread: (threadId: string) => ["mailbox", "thread", threadId] as const,
   messages: (threadId: string) => ["mailbox", "messages", threadId] as const,
@@ -127,10 +131,14 @@ export const mailboxKeys = {
   aliases: (mailboxId: string) => ["mailbox", "aliases", mailboxId] as const,
 };
 
-export function useSidebar() {
+export function useSidebar(mode: MailboxMode = "mine") {
   return useQuery({
-    queryKey: mailboxKeys.sidebar,
-    queryFn: () => apiRequest("/mailbox", z.array(mailboxSchema)),
+    queryKey: mailboxKeys.sidebar(mode),
+    queryFn: () =>
+      apiRequest(
+        mode === "company" ? "/mailbox?mode=company" : "/mailbox",
+        z.array(mailboxSchema),
+      ),
     // Folder counts go stale the moment mail arrives, and a wrong unread count is the single most
     // noticeable thing a mail client can get wrong.
     refetchInterval: 60_000,
@@ -231,7 +239,7 @@ export function useCreateFolder() {
         body: { name: input.name, parentId: input.parentId },
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: mailboxKeys.sidebar });
+      void queryClient.invalidateQueries({ queryKey: ["mailbox", "sidebar"] });
     },
   });
 }
@@ -245,7 +253,7 @@ export function useRenameFolder() {
         body: { name: input.name },
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: mailboxKeys.sidebar });
+      void queryClient.invalidateQueries({ queryKey: ["mailbox", "sidebar"] });
     },
   });
 }
@@ -333,7 +341,7 @@ export function useReply() {
       }),
     onSuccess: (_data, input) => {
       void queryClient.invalidateQueries({ queryKey: mailboxKeys.messages(input.threadId) });
-      void queryClient.invalidateQueries({ queryKey: mailboxKeys.sidebar });
+      void queryClient.invalidateQueries({ queryKey: ["mailbox", "sidebar"] });
     },
   });
 }

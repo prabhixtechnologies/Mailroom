@@ -11,6 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@prabhix/brand": "file:../../web-kit/packages/brand",
+    "@prabhix/oidc-client": "file:../../web-kit/packages/oidc-client",
     "@radix-ui/react-dialog": "1.1.14",
     "@radix-ui/react-slot": "1.2.3",
     "@tanstack/react-query": "5.102.7",

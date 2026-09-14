@@ -1,6 +1,13 @@
 # Prabhix Mail Server — Layer 1 Transport Runbook
 
 Self-hosted **Postfix + Dovecot + Rspamd** for organizations using `SELF_HOSTED` mode.
+This compose profile (`mailserver`) is the **fallback inbound path**, not the default.
+
+**Inbound decision (ap-south-1):** SES email receiving is available
+(`inbound-smtp.ap-south-1.amazonaws.com`) and is the intended ingest once S3/SNS is wired.
+Until then MX stays at GoDaddy and this profile stays opt-in. See
+[Infra/deploy/RUNBOOK-mail.md](../../Infra/deploy/RUNBOOK-mail.md).
+
 Most deployments should stay on **`EXTERNAL_IMAP`** (Google Workspace, Zoho) until you have
 ops bandwidth for deliverability, DNS, and abuse handling.
 

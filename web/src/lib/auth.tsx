@@ -11,7 +11,8 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { ApiClientError, apiRequest, configureApiClient } from "./api-client";
-import { beginLogout } from "./oidc";
+import { beginLogout } from "@prabhix/oidc-client";
+import "./oidc-config";
 
 /**
  * Who is signed in, and the access token to prove it.
