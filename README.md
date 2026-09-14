@@ -3,29 +3,39 @@
 Your own mailboxes, with folders. A mail client for the addresses Prabhix hosts, at
 `mail.prabhixtechnologies.com`.
 
-**Status: web and Android shipped.**
+**Status: web shipped; Android frozen in favour of the Flutter app in `../Mobile/apps/mailroom`.**
 
 ---
 
 ## What it is, and what it is not
 
 Mailroom is not a second version of OneOps' inbox. OneOps has a complete **shared team helpdesk**:
-threads, reply and forward, tags, canned replies, AI triage, SSE live updates, an Android UI. Several
-people work one queue, and a message there is a piece of work with an assignee and an SLA clock.
+threads, reply and forward, tags, canned replies, AI triage, SSE live updates — at `/inbox` in the
+OneOps console. Several people work one queue, and a message there is a piece of work with an
+assignee and an SLA clock.
 
 Mailroom is the other thing entirely — **one person's mail**. A message is correspondence, not a
 ticket. There is no assignee, no SLA, no queue. That distinction is commercial as well as conceptual:
 OneOps is sold to customers, and Mailroom is what anyone with an address on a Prabhix-hosted domain
 reads their own mail in.
 
+The one organization-wide thing Mailroom does is **Company mail**: a member holding `MAIL_READ_ALL`
+(organization OWNER, ADMIN and MANAGER by default) can switch from *My mail* to every mailbox the
+organization owns, grouped by owner. Each cross-mailbox read is recorded. An ordinary member never
+sees the switch. The boundary is written down in `../Infra/docs/PRODUCTS.md`, decision 1.
+
 ## Layout
 
 ```
-web/         the browser client — Vite, React 19, Tailwind 4, served by nginx
-android/     com.prabhix.mailroom — one module, one flavor, Compose
+web/         the browser client — Vite 8, React 19, Tailwind 4, served by nginx
+android/     com.prabhix.mailroom — FROZEN; replaced by ../Mobile/apps/mailroom (Flutter)
 mail-server/ Postfix, Dovecot, Rspamd transport
-backend/     Spring Boot API on :8083 — mailbox read path extracted (writes still TODO / 501)
 ```
+
+There is no backend here. Mailroom talks to the oneOps backend at `api.prabhixtechnologies.com`,
+which owns the mail module (`/api/v1/mailbox` for personal mail). A partial extraction used to live in
+`backend/`; it was deleted rather than left to drift, and can be redone on top of the shared
+`identity-spring-boot-starter` when there is a reason to run mail as its own service.
 
 The two are separate applications rather than one shared core, and they differ where a phone and a
 desktop differ: the web client renders mail HTML behind DOMPurify and a content policy and autosaves
@@ -48,10 +58,8 @@ Identity works as a general provider rather than as the platform's login endpoin
 
 ## The API it talks to
 
-**Local extract (Phase E):** mailbox reads go to **Mailroom** `http://localhost:8083`
-(`VITE_MAILROOM_API_URL`). Helpdesk `/mail/threads` stays on oneOps (`VITE_API_URL`, :8080).
-See `backend/README.md` for run notes.
-
+One host: the oneOps backend (`VITE_API_URL`; `http://localhost:8080` locally,
+`https://api.prabhixtechnologies.com` in production). Everything below is under `/api/v1`.
 
 | Concern | Endpoint |
 | --- | --- |
@@ -64,8 +72,10 @@ See `backend/README.md` for run notes.
 | Send a new message | `POST /mailbox/compose` |
 | Extra addresses | `GET`, `POST`, `DELETE /mailbox/{mailboxId}/aliases` |
 
-Message bodies come from the helpdesk's `GET /mail/threads/{id}`, and replies from
-`POST /mail/threads/{id}/reply`. Those are the same rows either way, and a second endpoint returning
+| Company mail (holders of `MAIL_READ_ALL` only) | `GET /mailbox?scope=organization` |
+
+Message bodies come from `GET /mailbox/threads/{id}/messages`, and replies from
+`POST /mail/threads/{id}/reply`. Those are the same rows the helpdesk reads, and a second copy of
 them would be one more place for the two to disagree.
 
 Deleting a folder does not delete its mail: the threads move to the inbox. A reply to an archived
@@ -73,11 +83,12 @@ thread brings the thread back; a message to a thread in Spam leaves it there.
 
 ## Transport
 
-Postfix, Dovecot and Rspamd run in `../Platform/mail-server`. Mailroom talks to the mailbox API and
-never to IMAP directly — the API owns the IMAP session, so a phone on a train is not holding one open.
+Postfix, Dovecot and Rspamd live in `mail-server/` here. Mailroom talks to the mailbox API and never
+to IMAP directly — the API owns the IMAP session, so a phone on a train is not holding one open.
 
-Inbound on port 25 works. Outbound goes via SES, because AWS blocks outbound 25 from EC2; see
-`../Platform/docs/MAIL.md`.
+Outbound goes via SES, because AWS blocks outbound 25 from EC2. Inbound for hosted domains is the open
+decision in `../Infra/deploy/RUNBOOK-mail.md`: the MX still points at the registrar, so a hosted
+address cannot yet receive internet mail. See `../Infra/docs/MAIL.md` for the design.
 
 ## Running it locally
 
@@ -97,11 +108,11 @@ way to check locally that one sign-in covers them.
 
 ## Deployment
 
-CI pushes `029096972251.dkr.ecr.ap-south-1.amazonaws.com/prabhix/prabhix-mailroom` on every push to
-`main`, and uploads a debug APK as a build artifact. Amazon ECR is the only registry; the workflow
-assumes an IAM role through GitHub's OIDC provider, so there is no registry secret to configure. The Platform repo's compose stack runs that image as the `mailroom` service and Caddy
-serves it at `mail.prabhixtechnologies.com`; `../Platform/deploy/deploy.sh` pulls and restarts it
-alongside the consoles.
+CI pushes `029096972251.dkr.ecr.ap-south-1.amazonaws.com/prabhix/mailroom` on every push to `main`.
+Amazon ECR is the only registry; the workflow assumes an IAM role through GitHub's OIDC provider, so
+there is no registry secret to configure. The Infra repository's compose stack runs that image as the
+`mailroom` service and Caddy serves it at `mail.prabhixtechnologies.com`; `../Infra/deploy/deploy.sh`
+pulls and restarts it alongside the consoles (`-MailroomTag <sha>` from `deploy-remote.ps1`).
 
 `VITE_IDENTITY_ISSUER` is baked into the image at build time, so a change to it needs a rebuild rather
 than a restart. The smoke checks assert the built bundle contains an authorize URL, which is what

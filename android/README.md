@@ -1,15 +1,20 @@
 # Prabhix Mailroom for Android
 
+> **FROZEN.** This tree takes no new features. The Flutter app in `../../Mobile/apps/mailroom`
+> replaces it (same package id `com.prabhix.mailroom`, same OIDC client, same redirect scheme). CI
+> still builds this until the Flutter app passes its checklist in `../../Infra/docs/SURFACES.md`;
+> then it moves to an `archive/native-android` branch. See `../../Infra/docs/PRODUCTS.md`, decision 2.
+
 `com.prabhix.mailroom`. One person's mail on a phone: folders, stars, reply, compose.
 
-Single module, single flavor — unlike `Platform/mobile/android`, which builds two apps from one tree
+Single module, single flavor — unlike `oneOps/mobile/android`, which builds two apps from one tree
 because OneOps and Admin share almost everything. This shares nothing with either beyond the auth
 pattern, so it is its own project.
 
 ## Running it
 
 ```bash
-cp ../../Platform/mobile/android/local.properties local.properties   # or write your own sdk.dir
+cp ../../oneOps/mobile/android/local.properties local.properties   # or write your own sdk.dir
 ./gradlew assembleDebug
 ```
 
