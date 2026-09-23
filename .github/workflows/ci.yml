@@ -24,7 +24,9 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          git clone --depth 1 https://github.com/prabhixtechnologies/web-kit.git "$GITHUB_WORKSPACE/../web-kit"
+          npm ci
 
       - name: Typecheck
         run: npx tsc --noEmit
@@ -90,6 +92,8 @@ jobs:
         with:
           context: ./web
           file: ./web/Dockerfile
+          build-contexts: |
+            webkit=https://github.com/prabhixtechnologies/web-kit.git#main
           push: true
           # Vite inlines these at build time; each must also be declared as an ARG in web/Dockerfile
           # or it is silently discarded and the image ships with the default.
