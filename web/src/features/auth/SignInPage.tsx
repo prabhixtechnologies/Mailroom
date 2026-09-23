@@ -24,11 +24,15 @@ export function SignInPage() {
 
   if (!isOidcEnabled()) {
     return (
-      <div id="main-content" className="mx-auto max-w-md space-y-4 p-8 text-center">
+      <div id="main-content" className="mr-gate">
         <SkipLink />
-        <LogoMark className="mx-auto size-12" />
-        <h1 className="font-display text-lg font-semibold tracking-tight">Mailroom is not configured</h1>
-        <p className="text-sm text-text-muted">
+        <LogoMark className="mx-auto mb-5 size-10" />
+        <div className="mr-lockup">
+          <div className="mr-lockup__name">Mailroom</div>
+          <div className="mr-lockup__tag">Company communication</div>
+        </div>
+        <h1 className="font-display text-xl font-medium tracking-tight">Mailroom is not configured</h1>
+        <p className="mt-2 max-w-sm text-sm text-text-muted">
           This build has no identity provider set, so there is nowhere to sign in. Whoever deployed it
           needs to build it with an identity issuer.
         </p>
@@ -37,11 +41,15 @@ export function SignInPage() {
   }
 
   return (
-    <div id="main-content" className="mx-auto max-w-md space-y-4 p-8 text-center">
+    <div id="main-content" className="mr-gate">
       <SkipLink />
-      <LogoMark className="mx-auto size-12" />
-      <h1 className="font-display text-lg font-semibold tracking-tight">Taking you to sign in</h1>
-      <p className="text-sm text-text-muted">One Prabhix account for every product.</p>
+      <LogoMark className="mx-auto mb-5 size-10" />
+      <div className="mr-lockup">
+        <div className="mr-lockup__name">Mailroom</div>
+        <div className="mr-lockup__tag">Company communication</div>
+      </div>
+      <h1 className="font-display text-xl font-medium tracking-tight">Taking you to sign in</h1>
+      <p className="mt-2 text-sm text-text-muted">One Prabhix account for every product.</p>
     </div>
   );
 }

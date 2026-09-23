@@ -33,10 +33,15 @@ const KIND_ICONS: Record<FolderKind, typeof Inbox> = {
   CUSTOM: FolderIcon,
 };
 
+const CONTEXT_KINDS = new Set<FolderKind>(["INBOX"]);
+const ROOM_KINDS = new Set<FolderKind>(["CUSTOM"]);
+
 export function Sidebar({
   mailboxes,
   mode,
   canReadCompany,
+  unreadMine,
+  unreadCompany,
   onSelectMode,
   selectedFolderId,
   onSelectFolder,
@@ -46,38 +51,39 @@ export function Sidebar({
   mailboxes: MailboxSummary[];
   mode: MailboxMode;
   canReadCompany: boolean;
+  unreadMine: number;
+  unreadCompany: number;
   onSelectMode: (mode: MailboxMode) => void;
   selectedFolderId: string | null;
   onSelectFolder: (mailbox: MailboxSummary, folder: Folder) => void;
   starredSelected: boolean;
   onSelectStarred: () => void;
 }) {
-  const groups =
-    mode === "company" ? groupByOwner(mailboxes) : [{ label: null, mailboxes }];
+  const groups = mode === "company" ? groupByOwner(mailboxes) : [{ label: null, mailboxes }];
 
   return (
-    <nav className="flex h-full flex-col gap-1 overflow-y-auto p-2 scrollbar-thin">
+    <nav className="mr-nav__scroll scrollbar-thin" aria-label="Mailboxes">
       {canReadCompany ? (
-        <div className="mb-1 grid grid-cols-2 gap-1 rounded-md bg-surface-muted p-1">
+        <div className="mr-context" role="tablist" aria-label="Mailbox context">
           <button
             type="button"
+            role="tab"
+            aria-selected={mode === "mine"}
+            className={cn("mr-context__btn", mode === "mine" && "is-on")}
             onClick={() => onSelectMode("mine")}
-            className={cn(
-              "min-h-9 rounded px-2 text-xs font-medium",
-              mode === "mine" ? "bg-surface text-text shadow-sm" : "text-text-muted hover:text-text",
-            )}
           >
             My mail
+            {unreadMine > 0 ? <span className="mr-context__count">{unreadMine}</span> : null}
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={mode === "company"}
+            className={cn("mr-context__btn", mode === "company" && "is-on")}
             onClick={() => onSelectMode("company")}
-            className={cn(
-              "min-h-9 rounded px-2 text-xs font-medium",
-              mode === "company" ? "bg-surface text-text shadow-sm" : "text-text-muted hover:text-text",
-            )}
           >
             Company mail
+            {unreadCompany > 0 ? <span className="mr-context__count">{unreadCompany}</span> : null}
           </button>
         </div>
       ) : null}
@@ -85,22 +91,16 @@ export function Sidebar({
       <button
         type="button"
         onClick={onSelectStarred}
-        className={cn(
-          "flex min-h-11 items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-          starredSelected ? "bg-primary/15 text-primary" : "hover:bg-surface-muted",
-        )}
+        className={cn("mr-nav-link", starredSelected && "is-on")}
+        aria-current={starredSelected ? "page" : undefined}
       >
-        <Star className="size-4" />
+        <Star />
         <span>Starred</span>
       </button>
 
       {groups.map((group) => (
         <div key={group.label ?? "mine"}>
-          {group.label ? (
-            <p className="mt-3 px-2 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-              {group.label}
-            </p>
-          ) : null}
+          {group.label ? <p className="mr-nav-label">{group.label}</p> : null}
           {group.mailboxes.map((mailbox) => (
             <MailboxSection
               key={mailbox.id}
@@ -144,8 +144,6 @@ function MailboxSection({
   selectedFolderId: string | null;
   onSelectFolder: (mailbox: MailboxSummary, folder: Folder) => void;
 }) {
-  // A person's own mailbox starts open; the shared ones they are a member of start closed, because
-  // somebody in six support queues does not want six expanded folder trees on first paint.
   const [open, setOpen] = useState(mailbox.mine || mailbox.kind === "PERSONAL");
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
@@ -153,6 +151,9 @@ function MailboxSection({
 
   const topLevel = mailbox.folders.filter((f) => f.parentId === null);
   const childrenOf = (parentId: string) => mailbox.folders.filter((f) => f.parentId === parentId);
+  const primary = topLevel.filter((f) => CONTEXT_KINDS.has(f.kind));
+  const rooms = topLevel.filter((f) => ROOM_KINDS.has(f.kind) && f.name.toLowerCase() !== "starred");
+  const filing = topLevel.filter((f) => !CONTEXT_KINDS.has(f.kind) && !ROOM_KINDS.has(f.kind));
 
   const submit = () => {
     const trimmed = name.trim();
@@ -169,57 +170,101 @@ function MailboxSection({
   };
 
   return (
-    <div className="mt-3">
-      <div className="flex items-center gap-1 px-1">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="flex min-w-0 flex-1 items-center gap-1 rounded px-1 py-1 text-left text-xs font-semibold uppercase tracking-wide text-text-muted hover:text-text"
-        >
-          {open ? (
-            <ChevronDown className="size-3 shrink-0" />
-          ) : (
-            <ChevronRight className="size-3 shrink-0" />
-          )}
-          <span className="truncate" title={mailbox.address}>
-            {companyMode ? mailbox.name : mailbox.mine ? "My mail" : mailbox.name}
-          </span>
-        </button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-11"
-          title={`New folder in ${mailbox.name}`}
-          aria-label={`New folder in ${mailbox.name}`}
-          onClick={() => setAdding((v) => !v)}
-        >
-          <Plus className="size-3.5" />
-        </Button>
-      </div>
+    <div>
+      {companyMode ? (
+        <div className="mr-box-head">
+          <button type="button" onClick={() => setOpen((v) => !v)} className="mr-nav-link">
+            {open ? <ChevronDown /> : <ChevronRight />}
+            <span className="truncate" title={mailbox.address}>
+              {mailbox.name}
+            </span>
+          </button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            title={`New folder in ${mailbox.name}`}
+            aria-label={`New folder in ${mailbox.name}`}
+            onClick={() => setAdding((v) => !v)}
+          >
+            <Plus className="size-3.5" />
+          </Button>
+        </div>
+      ) : null}
 
-      {open ? (
-        <div className="mt-0.5 space-y-0.5">
-          {topLevel.map((folder) => (
-            <div key={folder.id}>
-              <FolderRow
-                folder={folder}
-                depth={0}
-                selected={folder.id === selectedFolderId}
-                onSelect={() => onSelectFolder(mailbox, folder)}
-              />
-              {childrenOf(folder.id).map((child) => (
-                <FolderRow
-                  key={child.id}
-                  folder={child}
-                  depth={1}
-                  selected={child.id === selectedFolderId}
-                  onSelect={() => onSelectFolder(mailbox, child)}
+      {open || !companyMode ? (
+        <div>
+          {primary.map((folder) => (
+            <FolderBlock
+              key={folder.id}
+              mailbox={mailbox}
+              folder={folder}
+              children={childrenOf(folder.id)}
+              selectedFolderId={selectedFolderId}
+              onSelectFolder={onSelectFolder}
+            />
+          ))}
+
+          {rooms.length > 0 ? (
+            <div className="mr-nav-group">
+              <p className="mr-nav-label">Rooms</p>
+              {rooms.map((folder) => (
+                <FolderBlock
+                  key={folder.id}
+                  mailbox={mailbox}
+                  folder={folder}
+                  children={childrenOf(folder.id)}
+                  selectedFolderId={selectedFolderId}
+                  onSelectFolder={onSelectFolder}
                 />
               ))}
             </div>
-          ))}
+          ) : null}
 
-          {adding ? (
+          {filing.length > 0 ? (
+            <div className="mr-nav-group">
+              <p className="mr-nav-label">Filing</p>
+              {filing.map((folder) => (
+                <FolderBlock
+                  key={folder.id}
+                  mailbox={mailbox}
+                  folder={folder}
+                  children={childrenOf(folder.id)}
+                  selectedFolderId={selectedFolderId}
+                  onSelectFolder={onSelectFolder}
+                />
+              ))}
+            </div>
+          ) : null}
+
+          {!companyMode ? (
+            <div className="mt-2 px-1">
+              {adding ? (
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    submit();
+                  }}
+                >
+                  <Input
+                    autoFocus
+                    value={name}
+                    placeholder="New room"
+                    onChange={(event) => setName(event.target.value)}
+                    onBlur={() => {
+                      if (name.trim().length === 0) setAdding(false);
+                    }}
+                    className="h-8 text-xs"
+                  />
+                </form>
+              ) : (
+                <button type="button" className="mr-nav-link" onClick={() => setAdding(true)}>
+                  <Plus />
+                  <span>New room</span>
+                </button>
+              )}
+            </div>
+          ) : adding ? (
             <form
               className="px-2 py-1"
               onSubmit={(event) => {
@@ -235,12 +280,46 @@ function MailboxSection({
                 onBlur={() => {
                   if (name.trim().length === 0) setAdding(false);
                 }}
-                className="h-7 text-xs"
+                className="h-8 text-xs"
               />
             </form>
           ) : null}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function FolderBlock({
+  mailbox,
+  folder,
+  children,
+  selectedFolderId,
+  onSelectFolder,
+}: {
+  mailbox: MailboxSummary;
+  folder: Folder;
+  children: Folder[];
+  selectedFolderId: string | null;
+  onSelectFolder: (mailbox: MailboxSummary, folder: Folder) => void;
+}) {
+  return (
+    <div>
+      <FolderRow
+        folder={folder}
+        depth={0}
+        selected={folder.id === selectedFolderId}
+        onSelect={() => onSelectFolder(mailbox, folder)}
+      />
+      {children.map((child) => (
+        <FolderRow
+          key={child.id}
+          folder={child}
+          depth={1}
+          selected={child.id === selectedFolderId}
+          onSelect={() => onSelectFolder(mailbox, child)}
+        />
+      ))}
     </div>
   );
 }
@@ -262,17 +341,11 @@ function FolderRow({
       type="button"
       onClick={onSelect}
       aria-current={selected ? "page" : undefined}
-      className={cn(
-        "flex min-h-11 w-full items-center gap-2 rounded-md py-1.5 pr-2 text-sm transition-colors",
-        depth === 0 ? "pl-2" : "pl-7",
-        selected ? "bg-primary/15 text-primary" : "hover:bg-surface-muted",
-      )}
+      className={cn("mr-nav-link", depth > 0 && "pl-8", selected && "is-on")}
     >
-      <Icon className="size-4 shrink-0" />
-      <span className="min-w-0 flex-1 truncate text-left">{folder.name}</span>
-      {folder.unreadCount > 0 ? (
-        <span className="shrink-0 text-xs font-semibold">{folder.unreadCount}</span>
-      ) : null}
+      <Icon />
+      <span className="min-w-0 flex-1 truncate">{folder.name}</span>
+      {folder.unreadCount > 0 ? <span className="mr-nav-count">{folder.unreadCount}</span> : null}
     </button>
   );
 }

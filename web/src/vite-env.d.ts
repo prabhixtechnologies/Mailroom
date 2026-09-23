@@ -10,6 +10,8 @@ interface ImportMetaEnv {
   readonly VITE_IDENTITY_ISSUER?: string;
   /** Where "back to OneOps" goes, for somebody who arrived here from the console. */
   readonly VITE_ONEOPS_URL?: string;
+  /** `PRODUCTION` disables layout-stress preview (`?desk=busy`). */
+  readonly VITE_ENVIRONMENT?: string;
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;

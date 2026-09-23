@@ -131,7 +131,7 @@ export const mailboxKeys = {
   aliases: (mailboxId: string) => ["mailbox", "aliases", mailboxId] as const,
 };
 
-export function useSidebar(mode: MailboxMode = "mine") {
+export function useSidebar(mode: MailboxMode = "mine", enabled = true) {
   return useQuery({
     queryKey: mailboxKeys.sidebar(mode),
     queryFn: () =>
@@ -139,6 +139,7 @@ export function useSidebar(mode: MailboxMode = "mine") {
         mode === "company" ? "/mailbox?mode=company" : "/mailbox",
         z.array(mailboxSchema),
       ),
+    enabled,
     // Folder counts go stale the moment mail arrives, and a wrong unread count is the single most
     // noticeable thing a mail client can get wrong.
     refetchInterval: 60_000,

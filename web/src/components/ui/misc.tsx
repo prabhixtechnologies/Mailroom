@@ -28,7 +28,7 @@ export function Badge({
 }
 
 /**
- * What a list shows when it has nothing in it.
+ * What a list or desk shows when it has nothing in it.
  *
  * <p>Given its own component because the alternative — a bare "No results" — is where a mail client
  * feels broken: an empty inbox and a failed request look identical, and one of them is good news.
@@ -38,18 +38,29 @@ export function EmptyState({
   title,
   hint,
   action,
+  tone = "list",
 }: {
   icon?: React.ReactNode;
   title: string;
   hint?: string;
   action?: React.ReactNode;
+  tone?: "list" | "desk";
 }) {
+  if (tone === "desk") {
+    return (
+      <div className="mr-desk__empty">
+        <h2>{title}</h2>
+        {hint ? <p>{hint}</p> : null}
+        {action ? <div className="mt-5">{action}</div> : null}
+      </div>
+    );
+  }
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
-      {icon ? <div className="text-text-muted opacity-60">{icon}</div> : null}
-      <p className="text-sm font-medium">{title}</p>
-      {hint ? <p className="max-w-xs text-xs text-text-muted">{hint}</p> : null}
-      {action ? <div className="mt-2">{action}</div> : null}
+    <div className="mr-empty-list">
+      {icon ? <div className="mb-3 text-text-muted opacity-50">{icon}</div> : null}
+      <h2>{title}</h2>
+      {hint ? <p>{hint}</p> : null}
+      {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
 }

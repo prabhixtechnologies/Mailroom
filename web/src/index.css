@@ -1,67 +1,86 @@
 @import "tailwindcss";
 @import "@prabhix/brand/prabhix-tokens.css";
+@import "./mailroom.css";
 
 /*
-  Product aliases on top of @prabhix/brand tokens.
-  Teal/cyan accent · Fraunces display · Source Sans 3 body.
-  Product CSS vars map onto --px-* so existing Tailwind theme keys keep working.
+  Mailroom — warm paper, deep ink, clay accent (a wax seal, not MobiStack teal).
+  Fraunces is reserved for the lockup and empty-desk titles.
 */
 
 :root,
 [data-theme="light"] {
-  --px-accent-strong: #0f766e;
-  --px-radius: 0.75rem;
+  --mr-paper: #efe9de;
+  --mr-desk: #f7f3eb;
+  --mr-nav: #e7e0d3;
+  --mr-list: #f3eee5;
+  --mr-ink: #1c1915;
+  --mr-muted: #6a6358;
+  --mr-faint: #8a8276;
+  --mr-line: rgba(28, 25, 21, 0.1);
+  --mr-line-strong: rgba(28, 25, 21, 0.16);
+  --mr-accent: #8c3b2a;
+  --mr-accent-hover: #732f22;
+  --mr-accent-ink: #fff8f2;
+  --mr-success: #3d6b4f;
+  --mr-warning: #9a6700;
+  --mr-danger: #9b2c2c;
+  --mr-shadow: 0 18px 40px rgba(28, 25, 21, 0.12);
+  --mr-motion: 140ms ease;
 
-  --ink: var(--px-ink);
-  --primary: var(--px-accent);
-  --primary-strong: var(--px-accent-strong);
-  --primary-foreground: var(--px-accent-ink);
-  --accent: var(--px-focus);
-  --surface: var(--px-surface);
-  --surface-muted: var(--px-bg);
-  --surface-elevated: color-mix(in srgb, var(--px-surface) 92%, transparent);
-  --border: var(--px-border);
-  --text: var(--px-ink);
-  --text-muted: var(--px-muted);
-  --destructive: var(--px-danger);
-  --success: var(--px-success);
-  --warning: #b45309;
-  --ring: var(--px-focus);
-  --radius: var(--px-radius);
+  --ink: var(--mr-ink);
+  --primary: var(--mr-accent);
+  --primary-strong: var(--mr-accent-hover);
+  --primary-foreground: var(--mr-accent-ink);
+  --accent: var(--mr-accent);
+  --surface: var(--mr-desk);
+  --surface-muted: var(--mr-paper);
+  --surface-elevated: var(--mr-desk);
+  --border: var(--mr-line);
+  --text: var(--mr-ink);
+  --text-muted: var(--mr-muted);
+  --destructive: var(--mr-danger);
+  --success: var(--mr-success);
+  --warning: var(--mr-warning);
+  --ring: var(--mr-accent);
+  --radius: 0.5rem;
+  --px-radius: 0.5rem;
 }
 
 .dark,
 [data-theme="dark"],
 :root[data-theme="dark"] {
-  --px-bg: #071018;
-  --px-bg-accent: #0f2a36;
-  --px-surface: #0d1a24;
-  --px-ink: #e8eef4;
-  --px-muted: #8fa3b5;
-  --px-border: #1c3342;
-  --px-accent: #22d3ee;
-  --px-accent-ink: #042f2e;
-  --px-accent-strong: #67e8f9;
-  --px-danger: #f97066;
-  --px-success: #32d583;
-  --px-focus: #67e8f9;
-  --px-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  --mr-paper: #12100e;
+  --mr-desk: #1b1815;
+  --mr-nav: #151310;
+  --mr-list: #181613;
+  --mr-ink: #ece6dc;
+  --mr-muted: #9a9286;
+  --mr-faint: #746c62;
+  --mr-line: rgba(236, 230, 220, 0.08);
+  --mr-line-strong: rgba(236, 230, 220, 0.14);
+  --mr-accent: #c17a62;
+  --mr-accent-hover: #d3927c;
+  --mr-accent-ink: #1a120f;
+  --mr-success: #7aa88a;
+  --mr-warning: #c4a35a;
+  --mr-danger: #d07a72;
+  --mr-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
 
-  --ink: var(--px-ink);
-  --primary: var(--px-accent);
-  --primary-strong: var(--px-accent-strong);
-  --primary-foreground: var(--px-accent-ink);
-  --accent: var(--px-focus);
-  --surface: var(--px-surface);
-  --surface-muted: var(--px-bg-accent);
-  --surface-elevated: color-mix(in srgb, var(--px-surface) 88%, transparent);
-  --border: var(--px-border);
-  --text: var(--px-ink);
-  --text-muted: var(--px-muted);
-  --destructive: var(--px-danger);
-  --success: var(--px-success);
-  --warning: #fbbf24;
-  --ring: var(--px-focus);
+  --ink: var(--mr-ink);
+  --primary: var(--mr-accent);
+  --primary-strong: var(--mr-accent-hover);
+  --primary-foreground: var(--mr-accent-ink);
+  --accent: var(--mr-accent);
+  --surface: var(--mr-desk);
+  --surface-muted: var(--mr-paper);
+  --surface-elevated: #221e1a;
+  --border: var(--mr-line);
+  --text: var(--mr-ink);
+  --text-muted: var(--mr-muted);
+  --destructive: var(--mr-danger);
+  --success: var(--mr-success);
+  --warning: var(--mr-warning);
+  --ring: var(--mr-accent);
 }
 
 @theme {
@@ -82,11 +101,11 @@
   --color-ring: var(--ring);
   --font-sans: var(--px-font-body);
   --font-display: var(--px-font-display);
-  --radius-sm: calc(var(--radius) - 2px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
-  --radius-xl: 0.9rem;
-  --shadow-px: var(--px-shadow);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --shadow-px: var(--mr-shadow);
 }
 
 @layer base {
@@ -100,22 +119,23 @@
   }
 
   body {
-    @apply bg-surface text-text min-h-[100dvh] overflow-hidden;
-  }
-
-  h1,
-  h2,
-  h3 {
-    font-family: var(--font-display);
+    background: var(--mr-paper);
+    color: var(--mr-ink);
+    min-height: 100dvh;
+    overflow: hidden;
   }
 
   :focus-visible {
-    outline: 2px solid var(--ring);
+    outline: 2px solid var(--mr-accent);
     outline-offset: 2px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --mr-motion: 0ms;
+  }
+
   html {
     scroll-behavior: auto;
   }
@@ -132,43 +152,15 @@
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--text-muted) 40%, transparent) transparent;
+    scrollbar-color: color-mix(in srgb, var(--mr-faint) 50%, transparent) transparent;
   }
 
   .font-display {
     font-family: var(--font-display);
   }
-}
 
-/* Somebody else's HTML, rendered inside ours. Sanitised before it gets here; these rules only stop it
-   from breaking the layout — an unconstrained image or a wide <pre> would push the reading pane out. */
-.email-html {
-  @apply text-sm leading-relaxed text-text;
-}
-
-.email-html a {
-  @apply text-primary underline-offset-2 hover:underline;
-}
-
-.email-html blockquote {
-  @apply border-l-2 border-border pl-3 text-text-muted;
-}
-
-.email-html img {
-  max-width: 100%;
-  height: auto;
-}
-
-.email-html pre {
-  @apply overflow-x-auto rounded-md bg-surface-muted p-3 text-xs;
-}
-
-.email-html table {
-  max-width: 100%;
-}
-
-/* Skip layout for off-screen inbox/queue rows. Paging already caps how many exist. */
-.scan-row {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 72px;
+  .tabular {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+  }
 }

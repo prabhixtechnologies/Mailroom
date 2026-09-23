@@ -41,9 +41,9 @@ export function PersonalSettingsPage() {
   );
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden">
+    <div className="mr-shell">
       <SkipLink />
-      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-3 py-2">
+      <header className="mr-top">
         <Link
           to="/"
           className="inline-flex size-11 items-center justify-center rounded-md text-text-muted hover:bg-surface-muted hover:text-text"
@@ -51,7 +51,7 @@ export function PersonalSettingsPage() {
         >
           <ArrowLeft className="size-4" />
         </Link>
-        <span className="text-sm font-semibold">Settings</span>
+        <span className="mr-top__name">Settings</span>
         <div className="ml-auto">
           <ThemeToggle />
         </div>

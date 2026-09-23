@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Archive, Mail, MailOpen, Reply, ReplyAll, Send, Star, Trash2 } from "lucide-react";
+import { Archive, Forward, Mail, MailOpen, Reply, ReplyAll, Send, Star, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Avatar, Badge, EmptyState, Skeleton } from "@/components/ui/misc";
+import { emptyCopy } from "@/lib/emptyCopy";
 import { getApiErrorMessage } from "@/lib/api-client";
 import {
   folderOfKind,
@@ -21,62 +22,60 @@ export function ThreadPane({
   thread,
   mailbox,
   onClosed,
+  previewMessages,
 }: {
   thread: Thread | null;
   mailbox: MailboxSummary | undefined;
   onClosed: () => void;
+  previewMessages?: Message[];
 }) {
-  const messages = useThreadMessages(thread?.id);
+  const fetched = useThreadMessages(previewMessages ? undefined : thread?.id);
+  const messages = previewMessages
+    ? { data: previewMessages, isLoading: false, isError: false, error: null }
+    : fetched;
   const setFlags = useSetFlags();
   const moveThreads = useMoveThreads();
 
-  // Opening a conversation is what marks it read, which is the behaviour of every mail client and the
-  // reason there is no "mark as read" button in the list. Deliberately fires once per thread: keyed on
-  // the id so re-rendering does not repeat the call, and skipped when it is already read.
   const markedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!thread || thread.read) return;
+    if (!thread || thread.read || previewMessages) return;
     if (markedRef.current === thread.id) return;
     markedRef.current = thread.id;
     setFlags.mutate({ threadId: thread.id, read: true });
-  }, [thread, setFlags]);
+  }, [thread, setFlags, previewMessages]);
 
   if (!thread) {
-    return (
-      <EmptyState
-        icon={<Mail className="size-8" />}
-        title="Nothing selected"
-        hint="Pick a conversation on the left to read it."
-      />
-    );
+    return <EmptyState tone="desk" title={emptyCopy.desk.title} hint={emptyCopy.desk.hint} />;
   }
 
   const archive = folderOfKind(mailbox, "ARCHIVE");
   const trash = folderOfKind(mailbox, "TRASH");
 
   const move = (folderId: string | undefined) => {
-    if (!folderId) return;
+    if (!folderId || previewMessages) return;
     moveThreads.mutate({ folderId, threadIds: [thread.id] }, { onSuccess: onClosed });
   };
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex items-start gap-2 border-b border-border p-4">
+      <header className="mr-letter__head">
         <div className="min-w-0 flex-1">
-          <h2 className="truncate font-display text-lg font-semibold tracking-tight" title={thread.subject}>
+          <h2 className="mr-letter__subj" title={thread.subject}>
             {thread.subject}
           </h2>
-          <p className="truncate text-xs text-text-muted">
-            {thread.correspondent ?? "Unknown sender"}
-            {thread.messageCount > 1 ? ` · ${thread.messageCount} messages` : ""}
+          <p className="mr-letter__from">
+            {thread.correspondentName || thread.correspondent || "Unknown sender"}
+            {thread.correspondent && thread.correspondentName ? ` · ${thread.correspondent}` : ""}
+            {thread.messageCount > 1 ? ` · ${thread.messageCount} letters` : ""}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="mr-letter__acts">
           <Button
             variant="ghost"
             size="icon"
             title={thread.starred ? "Remove star" : "Add star"}
             aria-label={thread.starred ? "Remove star" : "Add star"}
+            disabled={Boolean(previewMessages)}
             onClick={() => setFlags.mutate({ threadId: thread.id, starred: !thread.starred })}
           >
             <Star className={cn("size-4", thread.starred && "fill-warning text-warning")} />
@@ -86,9 +85,8 @@ export function ThreadPane({
             size="icon"
             title={thread.read ? "Mark unread" : "Mark read"}
             aria-label={thread.read ? "Mark unread" : "Mark read"}
+            disabled={Boolean(previewMessages)}
             onClick={() => {
-              // Cleared so the effect above does not immediately mark it read again while the pane is
-              // still open — which would make the button look broken.
               markedRef.current = thread.id;
               setFlags.mutate({ threadId: thread.id, read: !thread.read });
             }}
@@ -100,7 +98,7 @@ export function ThreadPane({
             size="icon"
             title="Archive"
             aria-label="Archive"
-            disabled={!archive}
+            disabled={!archive || Boolean(previewMessages)}
             onClick={() => move(archive?.id)}
           >
             <Archive className="size-4" />
@@ -110,7 +108,7 @@ export function ThreadPane({
             size="icon"
             title="Move to trash"
             aria-label="Move to trash"
-            disabled={!trash}
+            disabled={!trash || Boolean(previewMessages)}
             onClick={() => move(trash?.id)}
           >
             <Trash2 className="size-4" />
@@ -118,9 +116,9 @@ export function ThreadPane({
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
+      <div className="mr-letter__body scrollbar-thin">
         {messages.isLoading ? (
-          <div className="space-y-3 p-4">
+          <div className="space-y-3 p-6">
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-24 w-full" />
           </div>
@@ -130,13 +128,11 @@ export function ThreadPane({
             hint={getApiErrorMessage(messages.error)}
           />
         ) : (
-          <ul className="divide-y divide-border">
+          <ul>
             {(messages.data ?? []).map((message, index) => (
               <MessageRow
                 key={message.id}
                 message={message}
-                // The newest message is what somebody opened the thread to read. Older ones collapse,
-                // which is the difference between a conversation and a wall of quoted replies.
                 defaultOpen={index === (messages.data ?? []).length - 1}
               />
             ))}
@@ -144,7 +140,7 @@ export function ThreadPane({
         )}
       </div>
 
-      <ReplyBox threadId={thread.id} />
+      <ReplyBox threadId={thread.id} preview={Boolean(previewMessages)} />
     </div>
   );
 }
@@ -153,8 +149,6 @@ function MessageRow({ message, defaultOpen }: { message: Message; defaultOpen: b
   const [open, setOpen] = useState(defaultOpen);
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  // After the sanitised HTML is in the DOM but before the browser paints, so links are already safe the
-  // first time they are clickable.
   useLayoutEffect(() => {
     if (open && bodyRef.current) hardenLinks(bodyRef.current);
   }, [open, message.id]);
@@ -162,48 +156,42 @@ function MessageRow({ message, defaultOpen }: { message: Message; defaultOpen: b
   const who = displayName(message.fromAddress, message.fromName);
 
   return (
-    <li className="p-4">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-start gap-3 text-left"
-      >
+    <li className="mr-message">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="mr-message__who">
         <Avatar label={initials(who)} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">{who}</span>
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold">{who}</span>
             {message.direction === "OUTBOUND" ? <Badge tone="muted">Sent</Badge> : null}
-            <span className="shrink-0 text-xs text-text-muted">
+            <time className="tabular shrink-0 text-xs text-text-muted" dateTime={message.occurredAt}>
               {formatFullDate(message.occurredAt)}
-            </span>
+            </time>
           </div>
-          {!open ? (
-            <p className="truncate text-xs text-text-muted">{message.snippet ?? message.bodyText}</p>
-          ) : (
-            <p className="truncate text-xs text-text-muted">{message.fromAddress}</p>
-          )}
+          <p className="truncate text-xs text-text-muted">
+            {open ? (message.fromAddress ?? "") : (message.snippet ?? message.bodyText)}
+          </p>
         </div>
       </button>
 
       {open ? (
-        <div className="mt-3 pl-11">
+        <div className="mr-message__copy">
           {message.bodyHtml ? (
             <div
               ref={bodyRef}
               className="email-html"
-              // Sanitised on the way in. Rendering a mail body without that is how a mail client hands
-              // an attacker the reader's session — see lib/sanitize.ts.
               dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(message.bodyHtml) }}
             />
           ) : (
-            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+            <pre className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed">
               {message.bodyText ?? "(no content)"}
             </pre>
           )}
           {message.attachmentCount > 0 ? (
-            <p className="mt-3 text-xs text-text-muted">
-              {message.attachmentCount} attachment{message.attachmentCount === 1 ? "" : "s"}
+            <p className="mt-4 text-xs text-text-muted">
+              {message.attachmentCount} file{message.attachmentCount === 1 ? "" : "s"} attached
             </p>
+          ) : defaultOpen ? (
+            <p className="mt-4 text-xs text-text-muted">{emptyCopy.attachments.title}</p>
           ) : null}
         </div>
       ) : null}
@@ -211,20 +199,19 @@ function MessageRow({ message, defaultOpen }: { message: Message; defaultOpen: b
   );
 }
 
-function ReplyBox({ threadId }: { threadId: string }) {
+function ReplyBox({ threadId, preview }: { threadId: string; preview: boolean }) {
   const [body, setBody] = useState("");
-  const [mode, setMode] = useState<"REPLY" | "REPLY_ALL">("REPLY");
+  const [mode, setMode] = useState<"REPLY" | "REPLY_ALL" | "FORWARD">("REPLY");
   const [error, setError] = useState<string | null>(null);
   const reply = useReply();
 
-  // A half-written reply belongs to the conversation it was written in, so switching threads must not
-  // carry it across.
   useEffect(() => {
     setBody("");
     setError(null);
   }, [threadId]);
 
   const send = () => {
+    if (preview) return;
     const text = body.trim();
     if (text.length === 0) return;
     setError(null);
@@ -238,16 +225,16 @@ function ReplyBox({ threadId }: { threadId: string }) {
   };
 
   return (
-    <div className="border-t border-border p-3">
+    <div className="mr-reply">
       <Textarea
         value={body}
         onChange={(event) => setBody(event.target.value)}
-        placeholder="Write a reply…"
-        className="min-h-[80px]"
+        placeholder={mode === "FORWARD" ? "Add a note, then send…" : "Write a reply…"}
+        className="min-h-[72px]"
       />
       {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
-      <div className="mt-2 flex items-center gap-2">
-        <Button onClick={send} disabled={reply.isPending || body.trim().length === 0}>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Button onClick={send} disabled={preview || reply.isPending || body.trim().length === 0}>
           <Send className="size-4" />
           {reply.isPending ? "Sending…" : "Send"}
         </Button>
@@ -266,6 +253,14 @@ function ReplyBox({ threadId }: { threadId: string }) {
         >
           <ReplyAll className="size-4" />
           Reply all
+        </Button>
+        <Button
+          size="sm"
+          variant={mode === "FORWARD" ? "secondary" : "ghost"}
+          onClick={() => setMode("FORWARD")}
+        >
+          <Forward className="size-4" />
+          Forward
         </Button>
       </div>
     </div>
