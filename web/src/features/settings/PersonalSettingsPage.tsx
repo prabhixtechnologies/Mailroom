@@ -163,12 +163,12 @@ function SignatureSection({ mailboxId }: { mailboxId: string }) {
   const queryClient = useQueryClient();
   const detail = useQuery({
     queryKey: ["mailbox-signature", mailboxId],
-    queryFn: () => apiRequest(`/mail/mailboxes/${mailboxId}`, mailboxDetailSchema),
+    queryFn: () => apiRequest(`/oneops/mail/mailboxes?id=${mailboxId}`, mailboxDetailSchema),
     retry: false,
   });
   const update = useMutation({
     mutationFn: (signature: string) =>
-      apiRequest(`/mail/mailboxes/${mailboxId}`, mailboxDetailSchema, {
+      apiRequest(`/oneops/mail/mailboxes?id=${mailboxId}`, mailboxDetailSchema, {
         method: "PATCH",
         body: { signature },
       }),

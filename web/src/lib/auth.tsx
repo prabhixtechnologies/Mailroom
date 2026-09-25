@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadSession = useCallback(async () => {
-    const authMe = await apiRequest("/auth/me", authMeSchema);
+    const authMe = await apiRequest("/oneops/auth/me", authMeSchema);
     // Set before anything else fetches, so the first mailbox request already carries the org header.
     orgIdRef.current = authMe.organizationId;
     setMe(authMe);
@@ -141,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (accessTokenRef.current) {
         // Clears the shared cookie, so the consoles are signed out too — one session, one sign-out.
-        await apiRequest("/auth/logout", { parse: () => undefined }, { method: "POST" });
+        await apiRequest("/oneops/auth/logout", { parse: () => undefined }, { method: "POST" });
       }
     } catch {
       // A failed logout call must not stop the local teardown.

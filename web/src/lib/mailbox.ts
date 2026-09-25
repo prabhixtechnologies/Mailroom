@@ -136,7 +136,7 @@ export function useSidebar(mode: MailboxMode = "mine", enabled = true) {
     queryKey: mailboxKeys.sidebar(mode),
     queryFn: () =>
       apiRequest(
-        mode === "company" ? "/mailbox?mode=company" : "/mailbox",
+        mode === "company" ? "/oneops/mailbox?mode=company" : "/oneops/mailbox",
         z.array(mailboxSchema),
       ),
     enabled,
@@ -150,7 +150,7 @@ export function useFolderThreads(folderId: string | undefined) {
   return useQuery({
     queryKey: folderId ? mailboxKeys.folder(folderId) : ["mailbox", "folder", "none"],
     queryFn: () =>
-      apiRequest(`/mailbox/folders/${folderId}/threads?limit=100`, z.array(threadSchema)),
+      apiRequest(`/oneops/mailbox/folders/threads?folderId=${folderId}&limit=100`, z.array(threadSchema)),
     enabled: !!folderId,
     refetchInterval: 60_000,
   });
@@ -159,7 +159,7 @@ export function useFolderThreads(folderId: string | undefined) {
 export function useStarred() {
   return useQuery({
     queryKey: mailboxKeys.starred,
-    queryFn: () => apiRequest("/mailbox/starred", z.array(threadSchema)),
+    queryFn: () => apiRequest("/oneops/mailbox/starred", z.array(threadSchema)),
   });
 }
 
@@ -167,7 +167,7 @@ export function useThreadMessages(threadId: string | undefined) {
   return useQuery({
     queryKey: threadId ? mailboxKeys.messages(threadId) : ["mailbox", "messages", "none"],
     queryFn: () =>
-      apiRequest(`/mailbox/threads/${threadId}/messages`, z.array(messageSchema)),
+      apiRequest(`/oneops/mailbox/threads/messages?threadId=${threadId}`, z.array(messageSchema)),
     enabled: !!threadId,
   });
 }
@@ -175,14 +175,14 @@ export function useThreadMessages(threadId: string | undefined) {
 export function useDrafts() {
   return useQuery({
     queryKey: mailboxKeys.drafts,
-    queryFn: () => apiRequest("/mailbox/drafts", z.array(draftSchema)),
+    queryFn: () => apiRequest("/oneops/mailbox/drafts", z.array(draftSchema)),
   });
 }
 
 export function useAliases(mailboxId: string | undefined) {
   return useQuery({
     queryKey: mailboxId ? mailboxKeys.aliases(mailboxId) : ["mailbox", "aliases", "none"],
-    queryFn: () => apiRequest(`/mailbox/${mailboxId}/aliases`, z.array(aliasSchema)),
+    queryFn: () => apiRequest(`/oneops/mailbox/aliases?mailboxId=${mailboxId}`, z.array(aliasSchema)),
     enabled: !!mailboxId,
   });
 }
@@ -207,7 +207,7 @@ export function useSetFlags() {
       starred?: boolean;
       snoozeUntil?: string;
     }) =>
-      apiRequest(`/mailbox/threads/${input.threadId}/flags`, threadSchema, {
+      apiRequest(`/oneops/mailbox/threads/flags?threadId=${input.threadId}`, threadSchema, {
         method: "PATCH",
         body: { read: input.read, starred: input.starred, snoozeUntil: input.snoozeUntil },
       }),
@@ -221,7 +221,7 @@ export function useMoveThreads() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { folderId: string; threadIds: string[] }) =>
-      apiRequest(`/mailbox/folders/${input.folderId}/move`, z.number(), {
+      apiRequest(`/oneops/mailbox/folders/move?folderId=${input.folderId}`, z.number(), {
         method: "POST",
         body: { threadIds: input.threadIds },
       }),
@@ -235,7 +235,7 @@ export function useCreateFolder() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { mailboxId: string; name: string; parentId?: string }) =>
-      apiRequest(`/mailbox/${input.mailboxId}/folders`, folderSchema, {
+      apiRequest(`/oneops/mailbox/folders?mailboxId=${input.mailboxId}`, folderSchema, {
         method: "POST",
         body: { name: input.name, parentId: input.parentId },
       }),
@@ -249,7 +249,7 @@ export function useRenameFolder() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { folderId: string; name: string }) =>
-      apiRequest(`/mailbox/folders/${input.folderId}`, folderSchema, {
+      apiRequest(`/oneops/mailbox/folders?folderId=${input.folderId}`, folderSchema, {
         method: "PATCH",
         body: { name: input.name },
       }),
@@ -263,7 +263,7 @@ export function useDeleteFolder() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (folderId: string) =>
-      apiRequestVoid(`/mailbox/folders/${folderId}`, { method: "DELETE" }),
+      apiRequestVoid(`/oneops/mailbox/folders?folderId=${folderId}`, { method: "DELETE" }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["mailbox"] });
     },
@@ -281,7 +281,7 @@ export function useSaveDraft() {
       bcc?: string[];
       subject?: string;
       bodyHtml?: string;
-    }) => apiRequest("/mailbox/drafts", draftSchema, { method: "PUT", body: input }),
+    }) => apiRequest("/oneops/mailbox/drafts", draftSchema, { method: "PUT", body: input }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: mailboxKeys.drafts });
     },
@@ -292,7 +292,7 @@ export function useDiscardDraft() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (draftId: string) =>
-      apiRequestVoid(`/mailbox/drafts/${draftId}`, { method: "DELETE" }),
+      apiRequestVoid(`/oneops/mailbox/drafts?draftId=${draftId}`, { method: "DELETE" }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: mailboxKeys.drafts });
     },
@@ -311,7 +311,7 @@ export function useCompose() {
       bodyHtml?: string;
       draftId?: string;
     }) =>
-      apiRequest("/mailbox/compose", composeResponseSchema, {
+      apiRequest("/oneops/mailbox/compose", composeResponseSchema, {
         method: "POST",
         body: input,
       }),
@@ -331,7 +331,7 @@ export function useReply() {
       cc?: string[];
       bodyHtml: string;
     }) =>
-      apiRequest(`/mail/threads/${input.threadId}/reply`, messageSchema, {
+      apiRequest(`/oneops/mail/threads/reply?id=${input.threadId}`, messageSchema, {
         method: "POST",
         body: {
           replyMode: input.replyMode,
@@ -351,7 +351,7 @@ export function useCreateAlias() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { mailboxId: string; address: string }) =>
-      apiRequest(`/mailbox/${input.mailboxId}/aliases`, aliasSchema, {
+      apiRequest(`/oneops/mailbox/aliases?mailboxId=${input.mailboxId}`, aliasSchema, {
         method: "POST",
         body: { address: input.address },
       }),
@@ -365,7 +365,7 @@ export function useDeleteAlias() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { mailboxId: string; aliasId: string }) =>
-      apiRequestVoid(`/mailbox/${input.mailboxId}/aliases/${input.aliasId}`, {
+      apiRequestVoid(`/oneops/mailbox/aliases?mailboxId=${input.mailboxId}&aliasId=${input.aliasId}`, {
         method: "DELETE",
       }),
     onSuccess: (_data, input) => {
