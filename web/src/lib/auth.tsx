@@ -22,7 +22,7 @@ import "./oidc-config";
  * consoles use. Nothing goes in localStorage: it is readable by injected script, and it is scoped to one
  * origin, so it could not carry a session across three hostnames even if that were safe.
  */
-const SESSION_TOKEN_PATH = "/auth/session/token";
+const SESSION_TOKEN_PATH = "/identity/auth/session/token";
 
 const authTokensSchema = z.object({
   accessToken: z.string(),
