@@ -172,10 +172,18 @@ export function useThreadMessages(threadId: string | undefined) {
   });
 }
 
-export function useDrafts() {
+/**
+ * Every saved draft for the signed-in user.
+ *
+ * <p>Gated rather than always-on: the Drafts folder is the only place that renders these,
+ * and fetching them on every mailbox view would be a request per navigation for a list
+ * almost nobody is looking at.
+ */
+export function useDrafts(enabled = true) {
   return useQuery({
     queryKey: mailboxKeys.drafts,
     queryFn: () => apiRequest("/oneops/mailbox/drafts", z.array(draftSchema)),
+    enabled,
   });
 }
 

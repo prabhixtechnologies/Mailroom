@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Archive, Forward, ImageIcon, Mail, MailOpen, Reply, ReplyAll, Send, Star, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
@@ -15,7 +15,8 @@ import {
   type Message,
   type Thread,
 } from "@/lib/mailbox";
-import { hardenLinks, sanitizeEmailHtml } from "@/lib/sanitize";
+import { sanitizeEmailHtml } from "@/lib/sanitize";
+import { EmailBody } from "./EmailBody";
 import { cn, displayName, formatFullDate, initials } from "@/lib/utils";
 
 export function ThreadPane({
@@ -148,26 +149,18 @@ export function ThreadPane({
 function MessageRow({ message, defaultOpen }: { message: Message; defaultOpen: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   const [remoteImagesLoaded, setRemoteImagesLoaded] = useState(false);
-  const bodyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setRemoteImagesLoaded(false);
   }, [message.id]);
 
-  const sanitizedHtml = useMemo(
-    () =>
-      message.bodyHtml
-        ? sanitizeEmailHtml(message.bodyHtml, { allowRemoteImages: remoteImagesLoaded })
-        : null,
-    [message.bodyHtml, remoteImagesLoaded],
-  );
-
-  const blockedRemoteImages =
-    !remoteImagesLoaded && Boolean(sanitizedHtml && /data-blocked-src=/i.test(sanitizedHtml));
-
-  useLayoutEffect(() => {
-    if (open && bodyRef.current) hardenLinks(bodyRef.current);
-  }, [open, message.id, sanitizedHtml]);
+  // Sanitised once here purely to answer "would anything be blocked?", so the banner is not
+  // offered on a message that has no remote images. EmailBody sanitises again for the frame,
+  // with the isolated ruleset that keeps the message's own CSS.
+  const blockedRemoteImages = useMemo(() => {
+    if (remoteImagesLoaded || !message.bodyHtml) return false;
+    return /data-blocked-src=/i.test(sanitizeEmailHtml(message.bodyHtml));
+  }, [message.bodyHtml, remoteImagesLoaded]);
 
   const who = displayName(message.fromAddress, message.fromName);
 
@@ -201,11 +194,7 @@ function MessageRow({ message, defaultOpen }: { message: Message; defaultOpen: b
             </div>
           ) : null}
           {message.bodyHtml ? (
-            <div
-              ref={bodyRef}
-              className="email-html"
-              dangerouslySetInnerHTML={{ __html: sanitizedHtml ?? "" }}
-            />
+            <EmailBody html={message.bodyHtml} allowRemoteImages={remoteImagesLoaded} />
           ) : (
             <pre className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed">
               {message.bodyText ?? "(no content)"}

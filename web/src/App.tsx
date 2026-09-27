@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation } from "react-router";
+import { RouteError } from "./components/RouteError";
 import { Skeleton } from "@/components/ui/misc";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { ThemeProvider } from "@/lib/theme";
@@ -46,10 +47,11 @@ const router = createBrowserRouter([
     children: [
       { path: "/", element: <MailPage /> },
       { path: "/settings", element: <PersonalSettingsPage /> },
-      // Anything else is a link from an older build or a typed URL. Home is a better answer than a
-      // 404 page. Helpdesk queue and mail admin used to live here; they are OneOps /inbox and
-      // Settings → Mail now.
-      { path: "*", element: <Navigate to="/" replace /> },
+      // An unknown URL says so rather than redirecting to the mailbox. The silent redirect
+      // meant a stale link from an older build was indistinguishable from a working one, so
+      // nobody ever reported them. Helpdesk queue and mail admin used to live here; they
+      // are OneOps /inbox and Settings → Mail now.
+      { path: "*", element: <RouteError /> },
     ],
   },
 ]);

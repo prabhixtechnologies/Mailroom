@@ -1,133 +1,87 @@
 @import "tailwindcss";
-@import "@prabhix/brand/prabhix-tokens.css";
+@import "@prabhix/brand/tailwind-preset.css";
 @import "./mailroom.css";
 
 /*
-  Mailroom — warm paper, deep ink, clay accent (a wax seal, not MobiStack teal).
-  Fraunces is reserved for the lockup and empty-desk titles.
+  Mailroom is the `mailroom` token theme: warm paper surfaces, a clay accent (a wax seal,
+  not MobiStack teal), and teal as the partner hue. The brand attribute is set on <html> in
+  index.html.
+
+  Nothing in this file defines a colour. The --mr-* names are Mailroom's own vocabulary,
+  used across mailroom.css and every component, and they are now aliases onto the generated
+  semantic roles. The clay ramp that used to live here as six hand-mixed values is now a
+  full 50–950 ramp in web-kit/packages/brand/tokens.json, contrast-checked in both themes.
+
+  Contract: Infra/docs/UX-STANDARD.md
 */
 
-:root,
-[data-theme="light"] {
-  --mr-paper: #efe9de;
-  --mr-desk: #f7f3eb;
-  --mr-nav: #e7e0d3;
-  --mr-list: #f3eee5;
-  --mr-ink: #1c1915;
-  --mr-muted: #6a6358;
-  --mr-faint: #8a8276;
-  --mr-line: rgba(28, 25, 21, 0.1);
-  --mr-line-strong: rgba(28, 25, 21, 0.16);
-  --mr-accent: #8c3b2a;
-  --mr-accent-hover: #732f22;
-  --mr-accent-ink: #fff8f2;
-  --mr-success: #3d6b4f;
-  --mr-warning: #9a6700;
-  --mr-danger: #9b2c2c;
-  --mr-shadow: 0 18px 40px rgba(28, 25, 21, 0.12);
-  --mr-motion: 140ms ease;
-
-  --ink: var(--mr-ink);
-  --primary: var(--mr-accent);
-  --primary-strong: var(--mr-accent-hover);
-  --primary-foreground: var(--mr-accent-ink);
-  --accent: var(--mr-accent);
-  --surface: var(--mr-desk);
-  --surface-muted: var(--mr-paper);
-  --surface-elevated: var(--mr-desk);
-  --border: var(--mr-line);
-  --text: var(--mr-ink);
-  --text-muted: var(--mr-muted);
-  --destructive: var(--mr-danger);
-  --success: var(--mr-success);
-  --warning: var(--mr-warning);
-  --ring: var(--mr-accent);
-  --radius: 0.5rem;
-  --px-radius: 0.5rem;
+:root {
+  --mr-paper: var(--px-bg);
+  --mr-desk: var(--px-surface);
+  --mr-nav: var(--px-surface-sunken);
+  --mr-list: var(--px-surface);
+  --mr-ink: var(--px-ink);
+  --mr-muted: var(--px-ink-muted);
+  --mr-faint: var(--px-ink-faint);
+  --mr-line: var(--px-border);
+  /* Anything that identifies a control rather than separating two rows: clears 3:1. */
+  --mr-line-strong: var(--px-border-strong);
+  --mr-accent: var(--px-accent);
+  --mr-accent-hover: var(--px-accent-hover);
+  --mr-accent-ink: var(--px-accent-ink);
+  --mr-accent-soft: var(--px-accent-subtle);
+  --mr-accent-soft-ink: var(--px-accent-subtle-ink);
+  /* The partner hue. Gives labels, links and the compose action a second colour to use. */
+  --mr-accent-2: var(--px-accent-2);
+  --mr-accent-2-ink: var(--px-accent-2-ink);
+  --mr-accent-2-soft: var(--px-accent-2-subtle);
+  --mr-accent-2-soft-ink: var(--px-accent-2-subtle-ink);
+  --mr-success: var(--px-success);
+  --mr-warning: var(--px-warning);
+  --mr-danger: var(--px-danger);
+  --mr-shadow: var(--px-elevation-4);
+  --mr-motion: var(--px-duration-fast) var(--px-ease-out);
 }
 
-.dark,
-[data-theme="dark"],
-:root[data-theme="dark"] {
-  --mr-paper: #12100e;
-  --mr-desk: #1b1815;
-  --mr-nav: #151310;
-  --mr-list: #181613;
-  --mr-ink: #ece6dc;
-  --mr-muted: #9a9286;
-  --mr-faint: #746c62;
-  --mr-line: rgba(236, 230, 220, 0.08);
-  --mr-line-strong: rgba(236, 230, 220, 0.14);
-  --mr-accent: #c17a62;
-  --mr-accent-hover: #d3927c;
-  --mr-accent-ink: #1a120f;
-  --mr-success: #7aa88a;
-  --mr-warning: #c4a35a;
-  --mr-danger: #d07a72;
-  --mr-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
-
-  --ink: var(--mr-ink);
-  --primary: var(--mr-accent);
-  --primary-strong: var(--mr-accent-hover);
-  --primary-foreground: var(--mr-accent-ink);
-  --accent: var(--mr-accent);
-  --surface: var(--mr-desk);
-  --surface-muted: var(--mr-paper);
-  --surface-elevated: #221e1a;
-  --border: var(--mr-line);
-  --text: var(--mr-ink);
-  --text-muted: var(--mr-muted);
-  --destructive: var(--mr-danger);
-  --success: var(--mr-success);
-  --warning: var(--mr-warning);
-  --ring: var(--mr-accent);
-}
-
+/*
+  Bridge layer: the colour names this app used before the token system. Kept so existing
+  call sites keep working; new code should use the generated names directly.
+*/
 @theme {
-  --color-ink: var(--ink);
-  --color-primary: var(--primary);
-  --color-primary-strong: var(--primary-strong);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-accent: var(--accent);
-  --color-surface: var(--surface);
-  --color-surface-muted: var(--surface-muted);
-  --color-surface-elevated: var(--surface-elevated);
-  --color-border: var(--border);
-  --color-text: var(--text);
-  --color-text-muted: var(--text-muted);
-  --color-destructive: var(--destructive);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-ring: var(--ring);
+  --color-primary: var(--px-accent);
+  --color-primary-strong: var(--px-accent-hover);
+  --color-primary-foreground: var(--px-accent-ink);
+  --color-surface-muted: var(--px-bg);
+  --color-surface-elevated: var(--px-surface-raised);
+  --color-text: var(--px-ink);
+  --color-text-muted: var(--px-ink-muted);
+  --color-destructive: var(--px-danger);
+  --color-ring: var(--px-focus);
+  --shadow-px: var(--px-elevation-4);
   --font-sans: var(--px-font-body);
-  --font-display: var(--px-font-display);
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
-  --shadow-px: var(--mr-shadow);
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
   html {
     @apply antialiased;
-    font-family: var(--font-sans);
+    font-family: var(--px-font-body);
   }
 
   body {
-    background: var(--mr-paper);
-    color: var(--mr-ink);
+    background: var(--px-bg);
+    color: var(--px-ink);
     min-height: 100dvh;
     overflow: hidden;
   }
 
-  :focus-visible {
-    outline: 2px solid var(--mr-accent);
-    outline-offset: 2px;
+  /*
+    A control's boundary has to clear 3:1 to be identifiable (WCAG 1.4.11), which the
+    divider-weight `border` token deliberately does not.
+  */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    border-color: var(--px-border-strong);
   }
 }
 
@@ -152,11 +106,11 @@
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--mr-faint) 50%, transparent) transparent;
+    scrollbar-color: color-mix(in srgb, var(--px-ink-faint) 50%, transparent) transparent;
   }
 
   .font-display {
-    font-family: var(--font-display);
+    font-family: var(--px-font-display);
   }
 
   .tabular {

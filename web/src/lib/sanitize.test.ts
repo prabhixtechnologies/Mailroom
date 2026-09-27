@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hardenLinks, sanitizeEmailHtml } from "./sanitize";
+import { isolatedEmailDocument, sanitizeEmailHtml } from "./sanitize";
 
 describe("sanitizeEmailHtml", () => {
   it("keeps the formatting a real message uses", () => {
@@ -63,15 +63,38 @@ describe("sanitizeEmailHtml", () => {
   });
 });
 
-describe("hardenLinks", () => {
-  it("adds noopener, without which the opened page can navigate this one", () => {
-    const container = document.createElement("div");
-    container.innerHTML = '<a href="https://example.com">x</a>';
-    hardenLinks(container);
+describe("sanitizeEmailHtml, isolated", () => {
+  it("keeps the message's own CSS, which is the reason the iframe exists", () => {
+    const html = sanitizeEmailHtml('<style>p{color:red}</style><p style="margin:0">x</p>', {
+      isolated: true,
+    });
+    expect(html).toContain("<style>");
+    expect(html).toContain('style="margin:0"');
+  });
 
-    const anchor = container.querySelector("a");
-    expect(anchor?.getAttribute("target")).toBe("_blank");
-    expect(anchor?.getAttribute("rel")).toContain("noopener");
-    expect(anchor?.getAttribute("rel")).toContain("noreferrer");
+  it("still drops scripts and forms inside the frame", () => {
+    const html = sanitizeEmailHtml('<script>1</script><form action="https://evil.test"></form>', {
+      isolated: true,
+    });
+    expect(html).not.toContain("script");
+    expect(html).not.toContain("form");
+  });
+});
+
+describe("isolatedEmailDocument", () => {
+  it("adds noopener, without which the opened page can navigate this one", () => {
+    const doc = isolatedEmailDocument('<a href="https://example.com">x</a>', { dark: false });
+    expect(doc).toContain('target="_blank"');
+    expect(doc).toContain("noopener");
+    expect(doc).toContain("noreferrer");
+  });
+
+  it("sets a base target, because a sandboxed frame cannot navigate the top window", () => {
+    expect(isolatedEmailDocument("<p>x</p>", { dark: false })).toContain('<base target="_blank">');
+  });
+
+  it("carries the app's theme in, since the frame cannot read it", () => {
+    expect(isolatedEmailDocument("<p>x</p>", { dark: true })).toContain("color-scheme: dark");
+    expect(isolatedEmailDocument("<p>x</p>", { dark: false })).toContain("color-scheme: light");
   });
 });

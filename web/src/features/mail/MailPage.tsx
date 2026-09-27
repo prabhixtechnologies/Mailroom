@@ -10,9 +10,11 @@ import { getApiErrorMessage } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
 import { ONEOPS_URL } from "@/lib/config";
 import {
+  useDrafts,
   useFolderThreads,
   useSidebar,
   useStarred,
+  type Draft,
   type Folder,
   type MailboxMode,
   type MailboxSummary,
@@ -27,6 +29,7 @@ import {
 import { cn, initials } from "@/lib/utils";
 import { SkipLink } from "@/components/SkipLink";
 import { ComposeDialog } from "./ComposeDialog";
+import { DraftList } from "./DraftList";
 import { Sidebar } from "./Sidebar";
 import { ThreadList } from "./ThreadList";
 import { ThreadPane } from "./ThreadPane";
@@ -101,6 +104,23 @@ export function MailPage() {
     () => activeMailbox?.folders.find((f) => f.id === selectedFolderId),
     [activeMailbox, selectedFolderId],
   );
+
+  /*
+    Drafts are a list of drafts, not a list of threads.
+    `useDrafts` and `ComposeDialog`'s `draft` prop were both written and neither was ever
+    connected, so the Drafts folder ran the ordinary thread query, found nothing, and said
+    the folder was empty — while compose went on autosaving into it. Half-finished mail went
+    in and could not come back out.
+  */
+  const onDrafts = !starredView && activeFolder?.kind === "DRAFTS";
+  const draftsQuery = useDrafts(onDrafts);
+  const drafts = draftsQuery.data ?? [];
+  const [editingDraft, setEditingDraft] = useState<Draft | null>(null);
+
+  const openDraft = (draft: Draft) => {
+    setEditingDraft(draft);
+    setComposeOpen(true);
+  };
 
   useEffect(() => {
     if (!selectedThread) return;
@@ -353,6 +373,17 @@ export function MailPage() {
               title={activeMode === "company" ? emptyCopy.company.title : emptyCopy.mailboxes.title}
               hint={activeMode === "company" ? emptyCopy.company.hint : emptyCopy.mailboxes.hint}
             />
+          ) : onDrafts ? (
+            <DraftList
+              drafts={drafts}
+              isLoading={draftsQuery.isLoading}
+              error={draftsQuery.error}
+              onOpen={openDraft}
+              onCompose={() => {
+                setEditingDraft(null);
+                setComposeOpen(true);
+              }}
+            />
           ) : (
             <ThreadList
               threads={visible}
@@ -391,9 +422,15 @@ export function MailPage() {
 
       <ComposeDialog
         open={composeOpen}
-        onOpenChange={setComposeOpen}
+        onOpenChange={(next) => {
+          setComposeOpen(next);
+          // Clear on close so the next "Compose" opens blank rather than reopening
+          // whichever draft was edited last.
+          if (!next) setEditingDraft(null);
+        }}
         mailboxes={mailboxes}
-        initialMailboxId={activeMailbox?.id}
+        initialMailboxId={editingDraft?.mailboxId ?? activeMailbox?.id}
+        draft={editingDraft}
       />
     </div>
   );
