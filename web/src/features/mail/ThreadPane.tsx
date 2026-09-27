@@ -167,7 +167,9 @@ function MessageRow({ message, defaultOpen }: { message: Message; defaultOpen: b
   return (
     <li className="mr-message">
       <button type="button" onClick={() => setOpen((v) => !v)} className="mr-message__who">
-        <Avatar label={initials(who)} />
+        {/* Seeded on the address, not the display name: the same person writing as
+            "Sam" and "Samantha Reed" should stay one colour. */}
+        <Avatar label={initials(who)} seed={message.fromAddress ?? who} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <span className="min-w-0 flex-1 truncate text-sm font-semibold">{who}</span>

@@ -1,3 +1,4 @@
+import { toneFor } from "@prabhix/brand";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -65,9 +66,31 @@ export function EmptyState({
   );
 }
 
-export function Avatar({ label }: { label: string }) {
+/**
+ * Initials in a circle, tinted from [seed] so a correspondent keeps one colour everywhere.
+ *
+ * A mail list is the case this matters most in: thirty rows of identical grey circles are
+ * decoration, while thirty tinted ones let you find the thread from your accountant
+ * without reading a single name. The initials still carry the meaning on their own, so
+ * nothing depends on telling the swatches apart.
+ */
+export function Avatar({ label, seed }: { label: string; seed?: string }) {
+  const tone = seed ? toneFor(seed) : undefined;
   return (
-    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-muted text-xs font-semibold text-text-muted">
+    <span
+      className={cn(
+        "flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+        tone ? "bg-[var(--tag-bg)] text-[var(--tag-ink)]" : "bg-surface-muted text-text-muted",
+      )}
+      style={
+        tone
+          ? ({
+              "--tag-bg": `var(--px-tag-${tone}-bg)`,
+              "--tag-ink": `var(--px-tag-${tone}-ink)`,
+            } as React.CSSProperties)
+          : undefined
+      }
+    >
       {label}
     </span>
   );

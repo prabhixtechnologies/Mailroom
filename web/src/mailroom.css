@@ -226,6 +226,16 @@
   height: 15px;
   flex: 0 0 auto;
   opacity: 0.7;
+  /* Folders the user created set --folder-ink per row. It is absent on the seven system
+     folders, where `inherit` leaves the nav's own colour alone. The selected row's accent
+     rule below is more specific and still wins. */
+  color: var(--folder-ink, inherit);
+}
+
+/* Undimmed, because the 4.5:1 these tones measure against the sidebar surface in both
+   modes is the figure at full opacity. */
+.mr-nav-link.is-tinted svg {
+  opacity: 1;
 }
 
 .mr-nav-link.is-on svg {

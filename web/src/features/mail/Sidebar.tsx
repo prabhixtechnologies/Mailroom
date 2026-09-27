@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { TAG_TONES, toneFor, type TagTone } from "@prabhix/brand";
+import { useState, type CSSProperties } from "react";
 import {
   Archive,
   ChevronDown,
@@ -336,16 +337,37 @@ function FolderRow({
   onSelect: () => void;
 }) {
   const Icon = KIND_ICONS[folder.kind];
+  const tone = folderTone(folder);
   return (
     <button
       type="button"
       onClick={onSelect}
       aria-current={selected ? "page" : undefined}
-      className={cn("mr-nav-link", depth > 0 && "pl-8", selected && "is-on")}
+      className={cn("mr-nav-link", depth > 0 && "pl-8", selected && "is-on", tone && "is-tinted")}
+      style={tone ? ({ "--folder-ink": `var(--px-tag-${tone}-ink)` } as CSSProperties) : undefined}
     >
       <Icon />
       <span className="min-w-0 flex-1 truncate">{folder.name}</span>
       {folder.unreadCount > 0 ? <span className="mr-nav-count">{folder.unreadCount}</span> : null}
     </button>
   );
+}
+
+/**
+ * The swatch for a folder's icon, or undefined to leave it on the accent.
+ *
+ * Only folders the user made get one. The seven system folders mean the same thing in
+ * every mailbox and reading Trash as "the red one" is a habit worth keeping, so tinting
+ * them by name would trade a learned signal for decoration.
+ *
+ * `folder.colour` has been in the API schema and unused by the UI. It is honoured when it
+ * names one of our swatches; anything else falls back to the id, because passing an
+ * arbitrary stored colour straight through would put a value on screen that never went
+ * through the contrast gate.
+ */
+function folderTone(folder: Folder): TagTone | undefined {
+  if (folder.kind !== "CUSTOM") return undefined;
+  const stored = folder.colour?.trim().toLowerCase();
+  if (stored && (TAG_TONES as readonly string[]).includes(stored)) return stored as TagTone;
+  return toneFor(folder.id);
 }
