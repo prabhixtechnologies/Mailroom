@@ -2,7 +2,7 @@ import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import axe from "axe-core";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { LogoMark } from "@/components/LogoMark";
 import { SignInPage } from "@/features/auth/SignInPage";
@@ -27,6 +27,15 @@ vi.mock("@/lib/mailbox", () => ({
 import { useAuth } from "@/lib/auth";
 
 const mockedUseAuth = vi.mocked(useAuth);
+
+beforeEach(() => {
+  mockedUseAuth.mockReturnValue({
+    permissions: [],
+    me: null,
+    sessionRecoveryReason: null,
+    clearSessionRecoveryReason: vi.fn(),
+  } as unknown as ReturnType<typeof useAuth>);
+});
 
 beforeAll(() => {
   Object.defineProperty(window, "matchMedia", {

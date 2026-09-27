@@ -48,7 +48,27 @@ SMTP_USERNAME=...
 SMTP_PASSWORD=...
 SMTP_STARTTLS=true
 MAIL_LMTP_TOKEN=<shared-secret-for-inbound-push>
+# Optional — HMAC key for X-Mail-Signature; when empty, MAIL_LMTP_TOKEN signs requests.
+MAIL_LMTP_SIGNING_SECRET=
+MAIL_LMTP_PUSH_URL=http://backend:8080/api/v1/oneops/mail/inbound/lmtp
 ```
+
+**Inbound push path:** After Rspamd accepts a message, Postfix `platform-push` runs
+`lmtp-push/postfix-deliver.sh`: signed HTTP POST to the platform, then Dovecot LMTP for Maildir.
+The push URL must stay on the Docker network (`backend:8080`). Caddy blocks the path on the public
+`api.prabhixtechnologies.com` host.
+
+Signed headers (see `Infra/docs/MAIL.md`): `X-Mail-Token`, `X-Mail-Timestamp`, `X-Mail-Nonce`,
+`X-Mail-Signature` over `{timestamp}\n{nonce}\n{recipient}\n{rawMimeBase64}`. Verify locally:
+
+```bash
+python mail-server/lmtp-push/verify_sign.py
+```
+
+**Relay hardening:** `postfix/main.cf` sets `mynetworks` to loopback only, requires SASL on
+submission (:587), and uses `milter_default_action = tempfail` when Rspamd is unavailable.
+Peer containers cannot relay without credentials. Keep `dovecot/bootstrap.passwd` empty in
+production — break-glass entries bypass console revocation.
 
 ---
 

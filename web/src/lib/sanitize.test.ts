@@ -44,9 +44,22 @@ describe("sanitizeEmailHtml", () => {
     expect(sanitizeEmailHtml('<iframe src="https://evil.test"></iframe>')).not.toContain("iframe");
   });
 
-  it("keeps remote images, which is a deliberate trade rather than an oversight", () => {
-    const html = sanitizeEmailHtml('<img src="https://tracker.test/pixel.gif">');
+  it("blocks remote images by default", () => {
+    const html = sanitizeEmailHtml('<img src="https://tracker.test/pixel.gif" alt="x">');
+    expect(html).not.toMatch(/\ssrc="https:\/\/tracker\.test/);
+    expect(html).toContain('data-blocked-src="https://tracker.test/pixel.gif"');
+  });
+
+  it("keeps remote images when explicitly allowed", () => {
+    const html = sanitizeEmailHtml('<img src="https://tracker.test/pixel.gif">', {
+      allowRemoteImages: true,
+    });
     expect(html).toContain("https://tracker.test/pixel.gif");
+  });
+
+  it("keeps cid images without treating them as remote", () => {
+    const html = sanitizeEmailHtml('<img src="cid:logo@mail">');
+    expect(html).toContain('src="cid:logo@mail"');
   });
 });
 

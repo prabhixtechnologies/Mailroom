@@ -7,6 +7,17 @@ on:
     branches: [main, master]
 
 jobs:
+  mail-server:
+    name: Mail server (LMTP signing)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: LMTP signature contract
+        run: python mail-server/lmtp-push/verify_sign.py
+
   web:
     name: Web (Vite)
     runs-on: ubuntu-latest
@@ -41,7 +52,7 @@ jobs:
 
   image:
     name: Build and push image
-    needs: [web]
+    needs: [web, mail-server]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     permissions:
@@ -93,7 +104,7 @@ jobs:
           context: ./web
           file: ./web/Dockerfile
           build-contexts: |
-            webkit=https://github.com/prabhixtechnologies/web-kit.git#main
+            webkit=https://github.com/prabhixtechnologies/web-kit.git#6841e45aab52e52d4fb970ee08f4540e71c6c447
           push: true
           # Vite inlines these at build time; each must also be declared as an ARG in web/Dockerfile
           # or it is silently discarded and the image ships with the default.

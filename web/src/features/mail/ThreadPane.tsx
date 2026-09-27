@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Archive, Forward, Mail, MailOpen, Reply, ReplyAll, Send, Star, Trash2 } from "lucide-react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Archive, Forward, ImageIcon, Mail, MailOpen, Reply, ReplyAll, Send, Star, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Avatar, Badge, EmptyState, Skeleton } from "@/components/ui/misc";
@@ -147,11 +147,27 @@ export function ThreadPane({
 
 function MessageRow({ message, defaultOpen }: { message: Message; defaultOpen: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [remoteImagesLoaded, setRemoteImagesLoaded] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setRemoteImagesLoaded(false);
+  }, [message.id]);
+
+  const sanitizedHtml = useMemo(
+    () =>
+      message.bodyHtml
+        ? sanitizeEmailHtml(message.bodyHtml, { allowRemoteImages: remoteImagesLoaded })
+        : null,
+    [message.bodyHtml, remoteImagesLoaded],
+  );
+
+  const blockedRemoteImages =
+    !remoteImagesLoaded && Boolean(sanitizedHtml && /data-blocked-src=/i.test(sanitizedHtml));
 
   useLayoutEffect(() => {
     if (open && bodyRef.current) hardenLinks(bodyRef.current);
-  }, [open, message.id]);
+  }, [open, message.id, sanitizedHtml]);
 
   const who = displayName(message.fromAddress, message.fromName);
 
@@ -175,11 +191,20 @@ function MessageRow({ message, defaultOpen }: { message: Message; defaultOpen: b
 
       {open ? (
         <div className="mr-message__copy">
+          {blockedRemoteImages ? (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs text-text-muted">
+              <ImageIcon className="size-3.5 shrink-0" aria-hidden />
+              <span>Remote images are hidden so senders cannot track when you read this message.</span>
+              <Button type="button" size="sm" variant="secondary" onClick={() => setRemoteImagesLoaded(true)}>
+                Load images
+              </Button>
+            </div>
+          ) : null}
           {message.bodyHtml ? (
             <div
               ref={bodyRef}
               className="email-html"
-              dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(message.bodyHtml) }}
+              dangerouslySetInnerHTML={{ __html: sanitizedHtml ?? "" }}
             />
           ) : (
             <pre className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed">

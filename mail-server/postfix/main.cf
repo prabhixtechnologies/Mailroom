@@ -12,6 +12,11 @@ mydestination = localhost
 inet_interfaces = all
 inet_protocols = ipv4
 
+# Only the MTA itself is a trusted relay client. Docker bridge ranges must not appear here or any
+# container on the compose network could send mail without SASL.
+mynetworks = 127.0.0.0/8 [::1]/128
+mynetworks_style = host
+
 # ---------------------------------------------------------------------------
 # TLS — inbound "may" accepts plaintext from legacy MTAs; submission uses STARTTLS.
 # Outbound uses DANE when the remote publishes TLSA records.
@@ -41,22 +46,24 @@ virtual_mailbox_limit = 0
 virtual_minimum_uid = 100
 virtual_uid_maps = static:1000
 virtual_gid_maps = static:1000
-virtual_transport = lmtp:unix:private/dovecot-lmtp
+virtual_transport = platform-push:
 
 # ---------------------------------------------------------------------------
 # Rspamd milter — spam scoring, DKIM signing, DMARC alignment checks.
 # ---------------------------------------------------------------------------
 smtpd_milters = inet:rspamd:11332
 non_smtpd_milters = $smtpd_milters
-milter_default_action = accept
+# If Rspamd is down, defer rather than accept unfiltered mail.
+milter_default_action = tempfail
 milter_protocol = 6
+milter_connect_timeout = 10s
+milter_command_timeout = 30s
 
 # ---------------------------------------------------------------------------
 # Inbound policy — reject relay attempts to unlisted recipients.
 # ---------------------------------------------------------------------------
-smtpd_relay_restrictions = permit_mynetworks, reject_unauth_destination
+smtpd_relay_restrictions = reject_unauth_destination
 smtpd_recipient_restrictions =
-    permit_mynetworks,
     permit_sasl_authenticated,
     reject_unauth_destination,
     reject_non_fqdn_recipient,

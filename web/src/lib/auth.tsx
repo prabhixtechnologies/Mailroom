@@ -39,11 +39,15 @@ const authMeSchema = z.object({
 
 export type AuthMe = z.infer<typeof authMeSchema>;
 
+export type SessionRecoveryReason = "security_revoked" | null;
+
 interface AuthContextValue {
   accessToken: string | null;
   me: AuthMe | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  sessionRecoveryReason: SessionRecoveryReason;
+  clearSessionRecoveryReason: () => void;
   loginWithTokens: (accessToken: string, idToken?: string) => Promise<void>;
   logout: () => Promise<void>;
   permissions: string[];
@@ -56,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessTokenState] = useState<string | null>(null);
   const [me, setMe] = useState<AuthMe | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionRecoveryReason, setSessionRecoveryReason] = useState<SessionRecoveryReason>(null);
 
   // The token lives in a ref as well as state. The ref is what the callbacks read; the state exists only
   // so the tree re-renders. Reading it from state inside a callback would change that callback's
@@ -75,7 +80,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setAccessToken = useCallback((token: string | null) => {
     accessTokenRef.current = token;
     setAccessTokenState(token);
-    if (token) sessionGone.current = false;
+    if (token) {
+      sessionGone.current = false;
+      setSessionRecoveryReason(null);
+    }
+  }, []);
+
+  const clearSessionRecoveryReason = useCallback(() => {
+    setSessionRecoveryReason(null);
   }, []);
 
   const loadSession = useCallback(async () => {
@@ -114,7 +126,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAccessToken(tokens.accessToken);
         return true;
       } catch (err) {
-        if (err instanceof ApiClientError && (err.status === 401 || err.status === 403)) {
+        if (err instanceof ApiClientError && err.status === 403) {
+          sessionGone.current = true;
+          setSessionRecoveryReason("security_revoked");
+        } else if (err instanceof ApiClientError && err.status === 401) {
           sessionGone.current = true;
         }
         return false;
@@ -195,11 +210,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       me,
       isLoading,
       isAuthenticated: !!me && !!accessToken,
+      sessionRecoveryReason,
+      clearSessionRecoveryReason,
       loginWithTokens,
       logout,
       permissions: me?.permissions ?? [],
     }),
-    [accessToken, me, isLoading, loginWithTokens, logout],
+    [
+      accessToken,
+      me,
+      isLoading,
+      sessionRecoveryReason,
+      clearSessionRecoveryReason,
+      loginWithTokens,
+      logout,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

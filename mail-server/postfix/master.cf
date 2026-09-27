@@ -3,6 +3,7 @@
 
 smtp      inet  n       -       n       -       -       smtpd
   -o content_filter=smtp:rspamd:11325
+  -o smtpd_relay_restrictions=reject_unauth_destination
 
 # Authenticated submission for agents and the platform outbox worker.
 submission inet n       -       n       -       -       smtpd
@@ -16,6 +17,10 @@ submission inet n       -       n       -       -       smtpd
 dovecot-lmtp unix -       -       n       -       -       lmtp
   -o lmtp_data_done_timeout=1200
   -o lmtp_send_xforward_command=yes
+
+# HTTP LMTP ingest to the platform, then hand off to Dovecot for Maildir/IMAP.
+platform-push unix -       -       n       -       -       pipe
+  flags=Rq user=nobody argv=/opt/lmtp-push/postfix-deliver.sh ${recipient}
 
 # Dovecot SASL auth socket for submission.
 dovecot   unix  -       n       n       -       -       pipe

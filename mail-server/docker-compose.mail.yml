@@ -47,9 +47,13 @@ services:
       RELAYHOST: ${MAIL_RELAY_HOST:-}
       RELAYHOST_USERNAME: ${MAIL_RELAY_USER:-}
       RELAYHOST_PASSWORD: ${MAIL_RELAY_PASSWORD:-}
+      MAIL_LMTP_PUSH_URL: ${MAIL_LMTP_PUSH_URL:-http://backend:8080/api/v1/oneops/mail/inbound/lmtp}
+      MAIL_LMTP_TOKEN: ${MAIL_LMTP_TOKEN:-}
+      MAIL_LMTP_SIGNING_SECRET: ${MAIL_LMTP_SIGNING_SECRET:-}
     volumes:
       - ./postfix/main.cf:/etc/postfix/main.cf:ro
       - ./postfix/master.cf:/etc/postfix/master.cf:ro
+      - ./lmtp-push:/opt/lmtp-push:ro
       - ./postfix/pgsql-virtual-mailbox-domains.cf:/etc/postfix/pgsql-virtual-mailbox-domains.cf:ro
       - ./postfix/pgsql-virtual-mailbox-maps.cf:/etc/postfix/pgsql-virtual-mailbox-maps.cf:ro
       - ./postfix/pgsql-virtual-alias-maps.cf:/etc/postfix/pgsql-virtual-alias-maps.cf:ro
