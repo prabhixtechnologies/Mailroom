@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useSearchParams } from "react-router";
-import { ExternalLink, Menu, RefreshCw, Search, Settings } from "lucide-react";
+import { ExternalLink, Keyboard, Menu, RefreshCw, Search, Settings } from "lucide-react";
 import { LogoMark } from "@/components/LogoMark";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { ONEOPS_URL } from "@/lib/config";
 import {
   useDrafts,
   useFolderThreads,
+  useSetFlags,
   useSidebar,
   useStarred,
   type Draft,
@@ -30,6 +31,7 @@ import { cn, initials } from "@/lib/utils";
 import { SkipLink } from "@/components/SkipLink";
 import { ComposeDialog } from "./ComposeDialog";
 import { DraftList } from "./DraftList";
+import { ShortcutSheet } from "./ShortcutSheet";
 import { Sidebar } from "./Sidebar";
 import { ThreadList } from "./ThreadList";
 import { ThreadPane } from "./ThreadPane";
@@ -66,7 +68,9 @@ export function MailPage() {
   const [navOpen, setNavOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const setFlags = useSetFlags();
 
   const liveBoxes = sidebar.data ?? [];
   const mailboxes = previewBusy && liveBoxes.length === 0 ? previewMailboxes() : liveBoxes;
@@ -210,23 +214,54 @@ export function MailPage() {
     }
   };
 
+  /*
+    The verbs need whichever letter is open right now, and the listener is bound once. Read
+    through a ref rather than adding the thread to the dependencies: re-subscribing a window
+    listener on every arrow-key press is a lot of churn for a value that is only ever read
+    inside the handler.
+  */
+  const liveThread = useRef<Thread | null>(null);
+  liveThread.current = selectedThread;
+
   useEffect(() => {
     const onWindowKey = (event: globalThis.KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, [contenteditable='true']")) return;
-      if (event.key === "/" && !event.metaKey && !event.ctrlKey) {
+      // Modified keys belong to the browser and the OS. Only `?` needs Shift, and it carries
+      // it in `event.key` rather than as a modifier to test for.
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+      if (event.key === "/") {
         event.preventDefault();
         searchRef.current?.focus();
         return;
       }
-      if (event.key === "c" && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      if (event.key === "?") {
+        event.preventDefault();
+        setShortcutsOpen((open) => !open);
+        return;
+      }
+      if (event.key === "c") {
         event.preventDefault();
         setComposeOpen(true);
+        return;
+      }
+
+      const thread = liveThread.current;
+      if (!thread) return;
+      if (event.key === "s") {
+        event.preventDefault();
+        setFlags.mutate({ threadId: thread.id, starred: !thread.starred });
+        return;
+      }
+      if (event.key === "u") {
+        event.preventDefault();
+        setFlags.mutate({ threadId: thread.id, read: !thread.read });
       }
     };
     window.addEventListener("keydown", onWindowKey);
     return () => window.removeEventListener("keydown", onWindowKey);
-  }, []);
+  }, [setFlags]);
 
   return (
     <div className="mr-shell">
@@ -248,6 +283,17 @@ export function MailPage() {
 
         <div className="mr-top__tools">
           <ThemeToggle />
+          {/* `?` opens the same sheet, but only for people who already suspect it exists. */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden sm:inline-flex"
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts (?)"
+            onClick={() => setShortcutsOpen(true)}
+          >
+            <Keyboard className="size-4" />
+          </Button>
           <Button variant="ghost" size="icon" aria-label="Refresh" onClick={refresh}>
             <RefreshCw className={cn("size-4", sidebar.isFetching && "animate-spin")} />
           </Button>
@@ -432,6 +478,8 @@ export function MailPage() {
         initialMailboxId={editingDraft?.mailboxId ?? activeMailbox?.id}
         draft={editingDraft}
       />
+
+      <ShortcutSheet open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );
 }
