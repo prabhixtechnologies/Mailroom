@@ -47,7 +47,8 @@
   Bridge layer: the colour names this app used before the token system. Kept so existing
   call sites keep working; new code should use the generated names directly.
 */
-@theme {
+/* `inline` so a `[data-brand]` scope reaches these. See build-tokens.mjs for why. */
+@theme inline {
   --color-primary: var(--px-accent);
   --color-primary-strong: var(--px-accent-hover);
   --color-primary-foreground: var(--px-accent-ink);
@@ -57,6 +58,9 @@
   --color-text-muted: var(--px-ink-muted);
   --color-destructive: var(--px-danger);
   --color-ring: var(--px-focus);
+}
+
+@theme {
   --shadow-px: var(--px-elevation-4);
   --font-sans: var(--px-font-body);
 }
