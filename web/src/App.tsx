@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation } from "react-router";
+import { Toaster } from "sonner";
 import { RouteError } from "./components/RouteError";
 import { Skeleton } from "@/components/ui/misc";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -62,6 +63,13 @@ export function App() {
       <ThemeProvider>
         <AuthProvider>
           <RouterProvider router={router} />
+          {/*
+            This app had no transient feedback at all, which is why nothing outside a dialog
+            could confirm it had happened. `richColors` takes the palette from the tokens rather
+            than sonner's own, so a success here is the same green as everywhere else, and the
+            close button means a message can be dismissed rather than waited out.
+          */}
+          <Toaster richColors closeButton position="top-right" />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
