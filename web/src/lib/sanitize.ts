@@ -108,9 +108,12 @@ export function isolatedEmailDocument(bodyHtml: string, options: { dark: boolean
     anchor.setAttribute("rel", "noopener noreferrer nofollow");
   }
 
-  // Inherited from the parent rather than read inside the frame, which has no script to read
-  // `prefers-color-scheme` and no access to the app's CSS variables.
+  // px-allow-literal: this string is the whole document of a sandboxed iframe rendering
+  // untrusted mail. Nothing inside it can see the app's stylesheet, so a var() would resolve to
+  // nothing and the message would render as unstyled black on transparent. The dark/light pair
+  // is passed in by the parent because the frame has no script to read prefers-color-scheme.
   const ink = options.dark ? "#e7e3df" : "#25211d";
+  // px-allow-literal: same frame, same reason.
   const link = options.dark ? "#7dd3fc" : "#0e7490";
 
   return `<!DOCTYPE html>

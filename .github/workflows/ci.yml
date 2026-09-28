@@ -42,6 +42,17 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      # Colours come from the generated tokens or they do not ship. The checker lives in web-kit
+      # beside the tokens it enforces and is already cloned above, so there is one implementation
+      # and adding an escape hatch does not mean a pull request per repository.
+      #
+      # Mailroom's two exceptions are both recorded in the source with a `px-allow-literal:`
+      # comment: the theme-color meta tag, and the ink colour injected into the sandboxed iframe
+      # that renders a message body, which by design cannot reach this app's stylesheet.
+      - name: No hard-coded colours
+        working-directory: ${{ github.workspace }}/../web-kit/packages/brand
+        run: node scripts/check-literals.mjs
+
       # The sanitiser tests are the ones worth failing a build over: Mailroom renders HTML an attacker
       # chose, and a regression there is a cross-site scripting hole in a mail client.
       - name: Test

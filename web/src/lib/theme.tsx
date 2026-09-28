@@ -31,6 +31,8 @@ function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme = theme;
   const meta = document.querySelector('meta[name="theme-color"]');
+  // px-allow-literal: the browser paints the address bar from this attribute before any
+  // stylesheet is consulted, so it cannot be var(). Mirrors --px-bg / --px-accent for mailroom.
   if (meta) meta.setAttribute("content", theme === "dark" ? "#12100e" : "#8c3b2a");
 }
 

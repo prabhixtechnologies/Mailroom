@@ -11,10 +11,14 @@ export function Badge({
   tone = "default",
   ...props
 }: React.HTMLAttributes<HTMLSpanElement> & { tone?: "default" | "muted" | "accent" }) {
+  // The generated subtle pairs, not an alpha tint of the accent with the accent on top. An alpha
+  // tint tracks the accent's own lightness, so the two stay close: measured, `bg-accent/15
+  // text-accent` was 3.87:1 at worst in light mode and 3.95:1 in dark. The subtle pair is
+  // asserted at 4.5:1 on every run and measures 6.84:1 at worst.
   const tones = {
-    default: "bg-primary/15 text-primary",
+    default: "bg-accent-subtle text-accent-subtle-ink",
     muted: "bg-surface-muted text-text-muted",
-    accent: "bg-accent/15 text-accent",
+    accent: "bg-accent-2-subtle text-accent-2-subtle-ink",
   } as const;
   return (
     <span
