@@ -80,17 +80,16 @@
   flex: 1;
 }
 
+/* One rule rather than two. The scrim token is already a different colour per theme - warm and
+   dark under the clay themes, black under the rest - so the dark override existed only to
+   re-state that, and the two opacities had drifted apart with nothing saying why. 45% is the
+   deeper of the pair, and it is what the dialog scrim in @prabhix/ui uses. */
 .mr-nav-scrim {
   position: absolute;
   inset: 0;
   z-index: 20;
   border: 0;
-  background: rgba(28, 25, 21, 0.28);
-}
-
-.dark .mr-nav-scrim,
-[data-theme="dark"] .mr-nav-scrim {
-  background: rgba(0, 0, 0, 0.45);
+  background: color-mix(in srgb, var(--px-scrim) 45%, transparent);
 }
 
 .mr-nav {

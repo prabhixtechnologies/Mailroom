@@ -187,7 +187,7 @@ function MessageRow({ message, defaultOpen }: { message: Message; defaultOpen: b
       {open ? (
         <div className="mr-message__copy">
           {blockedRemoteImages ? (
-            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs text-text-muted">
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-surface-muted px-3 py-2 text-xs text-text-muted">
               <ImageIcon className="size-3.5 shrink-0" aria-hidden />
               <span>Remote images are hidden so senders cannot track when you read this message.</span>
               <Button type="button" size="sm" variant="secondary" onClick={() => setRemoteImagesLoaded(true)}>
