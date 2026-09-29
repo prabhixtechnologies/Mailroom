@@ -1,4 +1,4 @@
-import { toneFor } from "@prabhix/brand";
+import { toneFor } from "@prabhixtechnologies/brand";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 

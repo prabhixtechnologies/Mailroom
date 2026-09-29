@@ -7,8 +7,8 @@ import path from "node:path";
 /**
  * Directories Vite may read outside this project.
  *
- * `@prabhix/brand` is a `file:` dependency on a sibling checkout, so
- * node_modules/@prabhix/brand is a link that leaves this repository, and Vite resolves links to
+ * `@prabhixtechnologies/brand` is a `file:` dependency on a sibling checkout, so
+ * node_modules/@prabhixtechnologies/brand is a link that leaves this repository, and Vite resolves links to
  * their real path before checking `server.fs.allow`. Its entry point builds the mark URLs with
  * `new URL("../marks/...", import.meta.url)`, which Vite rewrites into asset imports resolving
  * inside web-kit — so without this, importing anything from the package fails with "Denied ID"
@@ -19,7 +19,7 @@ import path from "node:path";
  * from serving the rest of the disk. Absent before `npm install`, in which case there is nothing
  * to allow.
  */
-const linkedPackages = ["@prabhix/brand"]
+const linkedPackages = ["@prabhixtechnologies/brand"]
   .map((name) => path.resolve(import.meta.dirname, "node_modules", name))
   .filter((dir) => fs.existsSync(dir))
   .map((dir) => fs.realpathSync(dir));
@@ -33,7 +33,7 @@ export default defineConfig({
     dedupe: ["react", "react-dom"],
   },
   optimizeDeps: {
-    include: ["@prabhix/oidc-client"],
+    include: ["@prabhixtechnologies/oidc-client"],
   },
   build: {
     rolldownOptions: {

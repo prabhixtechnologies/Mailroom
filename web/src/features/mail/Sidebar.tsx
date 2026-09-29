@@ -1,4 +1,4 @@
-import { TAG_TONES, toneFor, type TagTone } from "@prabhix/brand";
+import { TAG_TONES, toneFor, type TagTone } from "@prabhixtechnologies/brand";
 import { useState, type CSSProperties } from "react";
 import {
   Archive,

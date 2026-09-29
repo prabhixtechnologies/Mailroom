@@ -5,15 +5,15 @@ import { createPortal } from "react-dom";
   Row verbs reachable by right-click, by long-press, and from the keyboard.
 
   The third implementation of this idea in the portfolio, which wants explaining rather than
-  hiding. @prabhix/ui has the canonical one, built on Radix; OneOps uses it. MobiStack cannot,
+  hiding. @prabhixtechnologies/ui has the canonical one, built on Radix; OneOps uses it. MobiStack cannot,
   because it has no Tailwind and every class in that version would resolve to nothing. This app
-  does have Tailwind, but adding @prabhix/ui here means adding its dozen Radix packages and a
+  does have Tailwind, but adding @prabhixtechnologies/ui here means adding its dozen Radix packages and a
   second preset whose alias names collide with the ones index.css already declares - a larger and
   riskier change than the menu is worth, made in passing.
 
   The honest factoring is to lift the gesture handling - which is all of the difficult part, and
   none of the rendering - into a headless hook that all three can import, and leave each surface
-  its own panel. That is a change to @prabhix/ui and its consumers, not to this file.
+  its own panel. That is a change to @prabhixtechnologies/ui and its consumers, not to this file.
 
   Until then the contract is what is shared: the same verbs on the same three routes, and a
   visible trigger so the menu is discoverable. Infra/docs/UX-STANDARD.md § 3.2.

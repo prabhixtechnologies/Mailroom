@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { LogoMark } from "@/components/LogoMark";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/misc";
-import { beginLogin, completeLogin, rememberIdToken } from "@prabhix/oidc-client";
+import { beginLogin, completeLogin, rememberIdToken } from "@prabhixtechnologies/oidc-client";
 import { useAuth } from "@/lib/auth";
 import "@/lib/oidc-config";
 import { safeAppPath } from "@/lib/safePath";
