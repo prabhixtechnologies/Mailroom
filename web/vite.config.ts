@@ -1,28 +1,7 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import fs from "node:fs";
 import path from "node:path";
-
-/**
- * Directories Vite may read outside this project.
- *
- * `@prabhixtechnologies/brand` is a `file:` dependency on a sibling checkout, so
- * node_modules/@prabhixtechnologies/brand is a link that leaves this repository, and Vite resolves links to
- * their real path before checking `server.fs.allow`. Its entry point builds the mark URLs with
- * `new URL("../marks/...", import.meta.url)`, which Vite rewrites into asset imports resolving
- * inside web-kit — so without this, importing anything from the package fails with "Denied ID"
- * rather than a missing file, which is what the accessibility suite was doing.
- *
- * The real path rather than the parent of this repository: the layout is the same locally and on
- * a runner, where the checkout is a sibling too, but naming the one package keeps the dev server
- * from serving the rest of the disk. Absent before `npm install`, in which case there is nothing
- * to allow.
- */
-const linkedPackages = ["@prabhixtechnologies/brand"]
-  .map((name) => path.resolve(import.meta.dirname, "node_modules", name))
-  .filter((dir) => fs.existsSync(dir))
-  .map((dir) => fs.realpathSync(dir));
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -32,9 +11,14 @@ export default defineConfig({
     },
     dedupe: ["react", "react-dom"],
   },
-  optimizeDeps: {
-    include: ["@prabhixtechnologies/oidc-client"],
-  },
+  // `optimizeDeps.include` for @prabhixtechnologies/oidc-client used to sit here, and so did a
+  // `server.fs.allow` entry naming the real path of @prabhixtechnologies/brand in a sibling
+  // web-kit checkout. Both existed because the two were `file:` links leaving this repository:
+  // Vite excludes linked packages from pre-bundling, and it resolves a link to its real path
+  // before checking fs.allow, so brand's `new URL("../marks/…", import.meta.url)` resolved
+  // outside the allowed roots and failed as "Denied ID" — which is what stopped the
+  // accessibility suite from running at all. They install from GitHub Packages now, so there is
+  // no link to allow and nothing to opt back into pre-bundling.
   build: {
     rolldownOptions: {
       output: {
@@ -74,7 +58,7 @@ export default defineConfig({
     // 5175, after the two consoles on 5173 and 5174, so all three can run at once — which is the only
     // way to check locally that one sign-in covers all of them.
     port: 5175,
-    fs: { allow: [path.resolve(import.meta.dirname, ".."), ...linkedPackages] },
+    fs: { allow: [path.resolve(import.meta.dirname, "..")] },
     proxy: {
       "/api": {
         target: "http://localhost:8080",
