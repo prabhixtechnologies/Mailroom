@@ -33,14 +33,14 @@ mail-server/ Postfix, Dovecot, Rspamd transport
 ```
 
 There is no backend here. Mailroom talks to the oneOps backend at `api.prabhixtechnologies.com`,
-which owns the mail module (`/api/v1/mailbox` for personal mail). A partial extraction used to live in
+which owns the mail module (`/api/v1/oneops/mailbox` for personal mail). A partial extraction used to live in
 `backend/`; it was deleted rather than left to drift, and can be redone on top of the shared
 `identity-spring-boot-starter` when there is a reason to run mail as its own service.
 
-The two are separate applications rather than one shared core, and they differ where a phone and a
-desktop differ: the web client renders mail HTML behind DOMPurify and a content policy and autosaves
-drafts; Android shows the plain-text alternative and has no draft of its own. `android/README.md` lists
-what it deliberately leaves out and why.
+The web client and the Flutter app in `../Mobile/apps/mailroom` both talk to the same query-parameter
+mailbox API. The web client renders mail HTML behind DOMPurify and a rich-text editor. The phone
+shows HTML mail, saves drafts, and sends plain-text compose and replies with attachments. The frozen
+`android/` tree is not the shipping client. `android/README.md` lists what that old tree left out.
 
 ## Authentication
 
@@ -59,23 +59,60 @@ Identity works as a general provider rather than as the platform's login endpoin
 ## The API it talks to
 
 One host: the oneOps backend (`VITE_API_URL`; `http://localhost:8080` locally,
-`https://api.prabhixtechnologies.com` in production). Everything below is under `/api/v1`.
+`https://api.prabhixtechnologies.com` in production). Mailroom calls the **mailbox module** under
+`/api/v1/oneops/mailbox` (not the legacy `/mailbox` paths in older notes).
 
 | Concern | Endpoint |
 | --- | --- |
-| Sidebar — mailboxes with folders and unread counts | `GET /mailbox` (add `?mode=company` for Company mail) |
-| Threads in a folder | `GET /mailbox/folders/{id}/threads` |
-| Message bodies | `GET /mailbox/threads/{id}/messages` |
-| Read, starred, snoozed | `PATCH /mailbox/threads/{id}/flags` |
-| File into a folder | `POST /mailbox/folders/{id}/move` |
-| Folders | `POST /mailbox/{mailboxId}/folders`, `PATCH` and `DELETE /mailbox/folders/{id}` |
-| Drafts | `GET`, `PUT`, `DELETE /mailbox/drafts` |
-| Send a new message | `POST /mailbox/compose` |
-| Extra addresses | `GET`, `POST`, `DELETE /mailbox/{mailboxId}/aliases` |
+| Sidebar — mailboxes with folders and unread counts | `GET /oneops/mailbox` (add `?mode=company` for Company mail) |
+| Threads in a folder (cursor pages) | `GET /oneops/mailbox/folders/threads/page?folderId=&limit=&cursor=&q=&unreadOnly=&hasAttachment=` |
+| Starred / snoozed virtual lists | `GET /oneops/mailbox/starred`, `GET /oneops/mailbox/snoozed` |
+| Message bodies | `GET /oneops/mailbox/threads/messages?threadId=` |
+| Read, starred, snooze | `PATCH /oneops/mailbox/threads/flags?threadId=` (JSON body) |
+| Bulk flags | `POST /oneops/mailbox/threads/flags` |
+| File into a folder | `POST /oneops/mailbox/folders/move?folderId=` |
+| Folders | `POST /oneops/mailbox/folders?mailboxId=`, `PATCH` / `DELETE ?folderId=` |
+| Drafts | `GET`, `PUT`, `DELETE /oneops/mailbox/drafts` |
+| Send a new message | `POST /oneops/mailbox/compose` |
+| Reply / forward | `POST /oneops/mail/threads/reply?id=` |
+| Attachments | `POST /oneops/mailbox/attachments`, `GET …/attachments/pending?fileId=`, `GET …/attachments?messageId=` |
+| Live updates | `GET /oneops/mail/stream` (SSE over fetch) |
+| Extra addresses | `GET`, `POST`, `DELETE /oneops/mailbox/aliases?mailboxId=` |
 
-Message bodies are `GET /mailbox/threads/{id}/messages`; replies are `POST /mail/threads/{id}/reply`.
-Those are the same rows the helpdesk reads, and a second copy of them would be one more place for
-the two to disagree.
+Replies use the shared helpdesk outbox path above; message rows are the same ones OneOps reads at
+`/inbox`, so there is not a second copy of the thread store.
+
+### Modern web client (Mailroom `web/`)
+
+- **Cursor-paginated folder lists** with search, unread-only, and attachment filters; infinite scroll
+  and “Load more”.
+- **Starred**, **Snoozed**, and **Drafts** views; **Company mail** when `MAIL_READ_ALL` is granted.
+- **Bulk actions** (read/unread, star, archive, spam, trash, move, snooze / unsnooze).
+- **Compose** with recipient validation, rich-text (TipTap, code-split), drag-and-drop attachments,
+  autosaved drafts, and inline reply / forward on the reading desk.
+- **Sanitised HTML** rendering (DOMPurify + isolated iframe for message CSS); remote images blocked
+  until explicitly loaded.
+- **Keyboard shortcuts** (`?` for the list); responsive list/desk layout.
+- **Deep links** — the location bar stays in sync (OneOps can link to Mailroom with the same query
+  names):
+
+| Query | Meaning |
+| --- | --- |
+| `mode=company` | Company mail sidebar (requires permission) |
+| `view=starred` / `view=snoozed` | Virtual lists |
+| `mailbox=<id>` | Active mailbox (Company mail) |
+| `folder=<id>` | Folder threads |
+| `thread=<id>` | Open conversation |
+| `compose=1` | Open compose |
+| `draft=<id>` | Open a saved draft |
+| `q=` | Search (folder view uses server-side debounced query) |
+| `unread=1` | Unread-only filter |
+| `attachments=1` | Has-attachment filter |
+| `desk=busy` | Non-production layout stress preview (`VITE_ENVIRONMENT` ≠ `PRODUCTION`) |
+
+Example from the OneOps console (set `VITE_MAILROOM_URL` in OneOps web):
+
+`https://mail.prabhixtechnologies.com/?folder=<folderId>&thread=<threadId>`
 
 Deleting a folder does not delete its mail: the threads move to the inbox. A reply to an archived
 thread brings the thread back; a message to a thread in Spam leaves it there.
@@ -97,6 +134,9 @@ cd web
 cp .env.example .env
 npm install
 npm run dev          # http://localhost:5175
+npm test             # unit + integration (Vitest)
+npm run e2e:typecheck
+npm run e2e          # Playwright smoke tests (stubbed API; see web/e2e/README.md)
 ```
 
 It needs the platform backend on `:8080` and Identity on `:8081`. With `VITE_IDENTITY_ISSUER` blank

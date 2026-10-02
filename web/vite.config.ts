@@ -40,6 +40,11 @@ export default defineConfig({
               priority: 21,
             },
             {
+              name: "vendor-tiptap",
+              test: /node_modules[\\/](@tiptap|prosemirror)/,
+              priority: 22,
+            },
+            {
               name: "vendor-icons",
               test: /node_modules[\\/]lucide-react/,
               priority: 20,
@@ -69,5 +74,6 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    exclude: ["**/node_modules/**", "**/e2e/**"],
   },
 });

@@ -368,6 +368,8 @@ export function previewMessages(threadId: string): Message[] {
         direction: "INBOUND",
         fromAddress: "accounts@razorpay.com",
         fromName: "Razorpay",
+        to: ["admin@prabhixtechnologies.com"],
+        cc: [],
         subject: "Invoice #1042 — payment received",
         snippet: "Payment received · ₹12,500.",
         bodyHtml:
@@ -385,6 +387,8 @@ export function previewMessages(threadId: string): Message[] {
         direction: "OUTBOUND",
         fromAddress: "admin@prabhixtechnologies.com",
         fromName: "You",
+        to: ["priya@mobistack.shop"],
+        cc: [],
         subject: "Galaxy A55 screen stock for next week",
         snippet: "Can you hold a dozen?",
         bodyText: "Priya — can you hold a dozen A55 screens for the Indore shop until Thursday?",
@@ -396,6 +400,8 @@ export function previewMessages(threadId: string): Message[] {
         direction: "INBOUND",
         fromAddress: "priya@mobistack.shop",
         fromName: "Priya Sharma",
+        to: ["admin@prabhixtechnologies.com"],
+        cc: [],
         subject: "Re: Galaxy A55 screen stock for next week",
         snippet: "We can hold twelve units until Thursday.",
         bodyHtml:
@@ -412,6 +418,8 @@ export function previewMessages(threadId: string): Message[] {
       direction: "INBOUND",
       fromAddress: "mail@example.com",
       fromName: "Correspondent",
+      to: ["admin@prabhixtechnologies.com"],
+      cc: [],
       subject: "Letter",
       snippet: "A longer letter for the reading desk.",
       bodyHtml:

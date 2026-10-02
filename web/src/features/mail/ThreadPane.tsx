@@ -1,14 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Archive, Forward, ImageIcon, Mail, MailOpen, Reply, ReplyAll, Send, Star, Trash2 } from "lucide-react";
+import {
+  Archive,
+  Clock,
+  ImageIcon,
+  Mail,
+  MailOpen,
+  Star,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/input";
 import { Avatar, Badge, EmptyState, Skeleton } from "@/components/ui/misc";
 import { emptyCopy } from "@/lib/emptyCopy";
 import { getApiErrorMessage } from "@/lib/api-client";
 import {
   folderOfKind,
+  useAliases,
   useMoveThreads,
-  useReply,
   useSetFlags,
   useThreadMessages,
   type MailboxSummary,
@@ -16,7 +23,11 @@ import {
   type Thread,
 } from "@/lib/mailbox";
 import { sanitizeEmailHtml } from "@/lib/sanitize";
+import { ComposeSurface } from "./compose/ComposeSurface";
+import type { ReplyMode } from "./compose/mail-recipients";
 import { EmailBody } from "./EmailBody";
+import { MessageAttachments } from "./MessageAttachments";
+import { SnoozeMenu } from "./SnoozeMenu";
 import { cn, displayName, formatFullDate, initials } from "@/lib/utils";
 
 export function ThreadPane({
@@ -24,12 +35,15 @@ export function ThreadPane({
   mailbox,
   onClosed,
   previewMessages,
+  onReplyDirtyChange,
 }: {
   thread: Thread | null;
   mailbox: MailboxSummary | undefined;
   onClosed: () => void;
   previewMessages?: Message[];
+  onReplyDirtyChange?: (dirty: boolean) => void;
 }) {
+  const [snoozeAt, setSnoozeAt] = useState<{ x: number; y: number } | null>(null);
   const fetched = useThreadMessages(previewMessages ? undefined : thread?.id);
   const messages = previewMessages
     ? { data: previewMessages, isLoading: false, isError: false, error: null }
@@ -97,6 +111,19 @@ export function ThreadPane({
           <Button
             variant="ghost"
             size="icon"
+            title="Snooze"
+            aria-label="Snooze"
+            disabled={Boolean(previewMessages)}
+            onClick={(event) => {
+              const box = event.currentTarget.getBoundingClientRect();
+              setSnoozeAt({ x: box.left, y: box.bottom + 4 });
+            }}
+          >
+            <Clock className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             title="Archive"
             aria-label="Archive"
             disabled={!archive || Boolean(previewMessages)}
@@ -141,7 +168,26 @@ export function ThreadPane({
         )}
       </div>
 
-      <ReplyBox threadId={thread.id} preview={Boolean(previewMessages)} />
+      <ReplyCompose
+        key={thread.id}
+        threadId={thread.id}
+        mailbox={mailbox}
+        messages={messages.data ?? []}
+        preview={Boolean(previewMessages)}
+        onDirtyChange={onReplyDirtyChange}
+      />
+
+      <SnoozeMenu
+        label="Snooze conversation"
+        disabled={Boolean(previewMessages)}
+        anchor={snoozeAt}
+        onClose={() => setSnoozeAt(null)}
+        onPick={(iso) => {
+          setFlags.mutate({ threadId: thread.id, snoozeUntil: iso, read: true });
+          setSnoozeAt(null);
+          onClosed();
+        }}
+      />
     </div>
   );
 }
@@ -166,7 +212,13 @@ function MessageRow({ message, defaultOpen }: { message: Message; defaultOpen: b
 
   return (
     <li className="mr-message">
-      <button type="button" onClick={() => setOpen((v) => !v)} className="mr-message__who">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="mr-message__who"
+        aria-expanded={open}
+        aria-controls={`message-body-${message.id}`}
+      >
         {/* Seeded on the address, not the display name: the same person writing as
             "Sam" and "Samantha Reed" should stay one colour. */}
         <Avatar label={initials(who)} seed={message.fromAddress ?? who} />
@@ -185,7 +237,7 @@ function MessageRow({ message, defaultOpen }: { message: Message; defaultOpen: b
       </button>
 
       {open ? (
-        <div className="mr-message__copy">
+        <div className="mr-message__copy" id={`message-body-${message.id}`}>
           {blockedRemoteImages ? (
             <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-surface-muted px-3 py-2 text-xs text-text-muted">
               <ImageIcon className="size-3.5 shrink-0" aria-hidden />
@@ -203,9 +255,7 @@ function MessageRow({ message, defaultOpen }: { message: Message; defaultOpen: b
             </pre>
           )}
           {message.attachmentCount > 0 ? (
-            <p className="mt-4 text-xs text-text-muted">
-              {message.attachmentCount} file{message.attachmentCount === 1 ? "" : "s"} attached
-            </p>
+            <MessageAttachments messageId={message.id} attachmentCount={message.attachmentCount} />
           ) : defaultOpen ? (
             <p className="mt-4 text-xs text-text-muted">{emptyCopy.attachments.title}</p>
           ) : null}
@@ -215,90 +265,74 @@ function MessageRow({ message, defaultOpen }: { message: Message; defaultOpen: b
   );
 }
 
-function ReplyBox({ threadId, preview }: { threadId: string; preview: boolean }) {
-  const [body, setBody] = useState("");
-  const [mode, setMode] = useState<"REPLY" | "REPLY_ALL" | "FORWARD">("REPLY");
-  const [error, setError] = useState<string | null>(null);
-  const reply = useReply();
+function ReplyCompose({
+  threadId,
+  mailbox,
+  messages,
+  preview,
+  onDirtyChange,
+}: {
+  threadId: string;
+  mailbox: MailboxSummary | undefined;
+  messages: Message[];
+  preview: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
+}) {
+  const [mode, setMode] = useState<ReplyMode>("REPLY");
+  const aliases = useAliases(mailbox?.id);
+  const latest = messages.length > 0 ? messages[messages.length - 1] : undefined;
+  const ourAddresses = [
+    ...(mailbox ? [mailbox.address] : []),
+    ...(aliases.data?.map((a) => a.address) ?? []),
+  ];
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    setBody("");
-    setError(null);
+    setMode("REPLY");
+    setDirty(false);
+    onDirtyChange?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threadId]);
 
-  const send = () => {
-    if (preview) return;
-    const text = body.trim();
-    if (text.length === 0) return;
-    setError(null);
-    reply.mutate(
-      { threadId, replyMode: mode, bodyHtml: toHtml(text) },
-      {
-        onSuccess: () => setBody(""),
-        onError: (err) => setError(getApiErrorMessage(err)),
-      },
-    );
+  useEffect(() => {
+    if (!dirty || preview) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty, preview]);
+
+  const requestReplyMode = (next: ReplyMode) => {
+    if (dirty && next !== mode) {
+      const leave = window.confirm("Discard this unsent reply?");
+      if (!leave) return;
+      setDirty(false);
+      onDirtyChange?.(false);
+    }
+    setMode(next);
   };
+
+  if (!mailbox) return null;
 
   return (
     <div className="mr-reply">
-      <Textarea
-        value={body}
-        onChange={(event) => setBody(event.target.value)}
-        placeholder={mode === "FORWARD" ? "Add a note, then send…" : "Write a reply…"}
-        className="min-h-[72px]"
+      <ComposeSurface
+        layout="inline"
+        mailboxes={[mailbox]}
+        mailboxId={mailbox.id}
+        threadId={threadId}
+        replyMode={mode}
+        onReplyModeChange={requestReplyMode}
+        latestMessage={latest}
+        ourAddresses={ourAddresses}
+        preview={preview}
+        disabled={preview}
+        onDirtyChange={(next) => {
+          setDirty(next);
+          onDirtyChange?.(next);
+        }}
       />
-      {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Button onClick={send} disabled={preview || reply.isPending || body.trim().length === 0}>
-          <Send className="size-4" />
-          {reply.isPending ? "Sending…" : "Send"}
-        </Button>
-        <Button
-          size="sm"
-          variant={mode === "REPLY" ? "secondary" : "ghost"}
-          onClick={() => setMode("REPLY")}
-        >
-          <Reply className="size-4" />
-          Reply
-        </Button>
-        <Button
-          size="sm"
-          variant={mode === "REPLY_ALL" ? "secondary" : "ghost"}
-          onClick={() => setMode("REPLY_ALL")}
-        >
-          <ReplyAll className="size-4" />
-          Reply all
-        </Button>
-        <Button
-          size="sm"
-          variant={mode === "FORWARD" ? "secondary" : "ghost"}
-          onClick={() => setMode("FORWARD")}
-        >
-          <Forward className="size-4" />
-          Forward
-        </Button>
-      </div>
     </div>
   );
 }
-
-/**
- * Turns what somebody typed into the HTML the send path expects.
- *
- * <p>Escaped first. The body goes out as HTML, so an unescaped `<` from a person writing about code
- * would arrive as markup — at best a mangled message, at worst this app injecting markup into the
- * recipient's mail client on their behalf.
- */
-function toHtml(text: string): string {
-  const escaped = text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-  return escaped
-    .split(/\n{2,}/)
-    .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br>")}</p>`)
-    .join("");
-}
-
-export { toHtml };

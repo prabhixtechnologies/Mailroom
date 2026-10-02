@@ -40,10 +40,12 @@ describe("ShortcutSheet", () => {
     // only move the place the two can disagree.
     // From the package root: vitest runs with cwd there, and `import.meta.url` under jsdom
     // is an http URL rather than a file one.
-    const page = readFileSync(resolve("src/features/mail/MailPage.tsx"), "utf8");
-    const bound = new Set(
-      [...page.matchAll(/event\.key === "([^"]+)"/g)].map((match) => match[1]),
-    );
+    const listNav = readFileSync(resolve("src/features/mail/MailPage.tsx"), "utf8");
+    const shortcuts = readFileSync(resolve("src/features/mail/useMailKeyboardShortcuts.ts"), "utf8");
+    const bound = new Set([
+      ...listNav.matchAll(/event\.key === "([^"]+)"/g),
+      ...shortcuts.matchAll(/event\.key === "([^"]+)"/g),
+    ].map((match) => match[1]));
     // The arrow glyphs and "Esc" are how a person reads them, not how the DOM names them.
     const asEventKey: Record<string, string> = {
       "↓": "ArrowDown",

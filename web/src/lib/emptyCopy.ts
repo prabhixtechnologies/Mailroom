@@ -13,6 +13,10 @@ export const emptyCopy = {
     title: "Nothing kept close.",
     hint: "Star a conversation and it will wait on this list.",
   },
+  snoozed: {
+    title: "Nothing tucked away.",
+    hint: "Snooze a conversation and it will reappear when you asked for it.",
+  },
   search: {
     title: "No letters match.",
     hint: "Try a sender, a subject line, or a word from the preview.",

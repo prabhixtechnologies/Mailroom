@@ -49,6 +49,20 @@ export function configureApiClient(config: {
   onUnauthorized = config.onUnauthorized;
 }
 
+/** For authenticated SSE; mirrors what {@link apiRequest} sends on REST calls. */
+export function getApiAuthHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const headers: Record<string, string> = { ...extra };
+  const token = getAccessToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const orgId = getOrgId();
+  if (orgId) headers["X-Prabhix-Org"] = orgId;
+  return headers;
+}
+
+export function refreshApiSession(): Promise<boolean> {
+  return refreshTokens();
+}
+
 function buildHeaders(options: RequestOptions, jsonBody: boolean): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: "application/json",

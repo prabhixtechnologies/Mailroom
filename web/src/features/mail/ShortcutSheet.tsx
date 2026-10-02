@@ -2,17 +2,6 @@ import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/*
-  The shortcuts, written down.
-
-  Mailroom already bound `/` and `c` and told nobody. A shortcut nobody can find is worth
-  about as much as one that was never written: the people who benefit most from keyboard
-  verbs are the ones who will not go looking through a settings page for them.
-
-  `?` is the convention every mail client shares, so this is the one shortcut that does not
-  itself need discovering.
-*/
-
 interface Group {
   title: string;
   items: { keys: string[]; label: string }[];
@@ -34,6 +23,7 @@ const GROUPS: Group[] = [
       { keys: ["↑"], label: "Previous letter" },
       { keys: ["Enter"], label: "Open the first letter" },
       { keys: ["Esc"], label: "Close the open letter" },
+      { keys: ["x"], label: "Select or deselect the open letter" },
     ],
   },
   {
@@ -41,6 +31,10 @@ const GROUPS: Group[] = [
     items: [
       { keys: ["s"], label: "Star, or remove the star" },
       { keys: ["u"], label: "Mark unread, or read" },
+      { keys: ["r"], label: "Mark read" },
+      { keys: ["e"], label: "Archive" },
+      { keys: ["#"], label: "Move to trash" },
+      { keys: ["b"], label: "Snooze" },
     ],
   },
 ];
@@ -70,7 +64,6 @@ export function ShortcutSheet({ open, onClose }: { open: boolean; onClose: () =>
         aria-modal="true"
         aria-labelledby="shortcut-sheet-title"
         className="mr-sheet"
-        // The scrim closes on click; the panel must not, or every click inside dismisses it.
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mr-sheet__head">

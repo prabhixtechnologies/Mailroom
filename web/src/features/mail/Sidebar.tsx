@@ -11,6 +11,7 @@ import {
   Send,
   ShieldAlert,
   Star,
+  Clock,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,8 @@ export function Sidebar({
   onSelectFolder,
   starredSelected,
   onSelectStarred,
+  snoozedSelected,
+  onSelectSnoozed,
 }: {
   mailboxes: MailboxSummary[];
   mode: MailboxMode;
@@ -59,6 +62,8 @@ export function Sidebar({
   onSelectFolder: (mailbox: MailboxSummary, folder: Folder) => void;
   starredSelected: boolean;
   onSelectStarred: () => void;
+  snoozedSelected: boolean;
+  onSelectSnoozed: () => void;
 }) {
   const groups = mode === "company" ? groupByOwner(mailboxes) : [{ label: null, mailboxes }];
 
@@ -97,6 +102,15 @@ export function Sidebar({
       >
         <Star />
         <span>Starred</span>
+      </button>
+      <button
+        type="button"
+        onClick={onSelectSnoozed}
+        className={cn("mr-nav-link", snoozedSelected && "is-on")}
+        aria-current={snoozedSelected ? "page" : undefined}
+      >
+        <Clock />
+        <span>Snoozed</span>
       </button>
 
       {groups.map((group) => (

@@ -1,5 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useSearchParams } from "react-router";
+import {
+  buildMailUrlSearchParams,
+  mailUrlStateEquals,
+  parseMailUrlState,
+  resolveMailUrlState,
+  type MailUrlState,
+} from "@/lib/mail-url-state";
 import { ExternalLink, Keyboard, Menu, RefreshCw, Search, Settings } from "lucide-react";
 import { LogoMark } from "@/components/LogoMark";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -9,12 +16,13 @@ import { emptyCopy } from "@/lib/emptyCopy";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
 import { ONEOPS_URL } from "@/lib/config";
+import { useMailStream } from "@/lib/mail-stream";
 import {
+  folderOfKind,
   useDrafts,
-  useFolderThreads,
+  useMoveThreads,
   useSetFlags,
   useSidebar,
-  useStarred,
   type Draft,
   type Folder,
   type MailboxMode,
@@ -25,16 +33,45 @@ import {
   deskPreviewActive,
   previewMailboxes,
   previewMessages,
-  previewThreadsFor,
 } from "@/lib/preview";
 import { cn, initials } from "@/lib/utils";
 import { SkipLink } from "@/components/SkipLink";
+import { BulkActionBar } from "./BulkActionBar";
 import { ComposeDialog } from "./ComposeDialog";
 import { DraftList } from "./DraftList";
 import { ShortcutSheet } from "./ShortcutSheet";
 import { Sidebar } from "./Sidebar";
+import { SnoozeMenu } from "./SnoozeMenu";
 import { ThreadList } from "./ThreadList";
 import { ThreadPane } from "./ThreadPane";
+import { useMailKeyboardShortcuts } from "./useMailKeyboardShortcuts";
+import { useMailViewState } from "./useMailViewState";
+import { useThreadSelection } from "./useThreadSelection";
+
+function SelectAllCheckbox({
+  allSelected,
+  someSelected,
+  onToggle,
+}: {
+  allSelected: boolean;
+  someSelected: boolean;
+  onToggle: () => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = someSelected;
+  }, [someSelected]);
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      className="mr-list__select-all"
+      aria-label={allSelected ? "Deselect all on this page" : "Select all on this page"}
+      checked={allSelected}
+      onChange={onToggle}
+    />
+  );
+}
 
 function unreadTotal(mailboxes: MailboxSummary[]): number {
   return mailboxes.reduce(
@@ -43,80 +80,56 @@ function unreadTotal(mailboxes: MailboxSummary[]): number {
   );
 }
 
-/**
- * Three panes on a desktop, one at a time on a phone.
- *
- * <p>The layout is driven by what is selected rather than by a route, so opening a conversation does not
- * push a history entry — on a phone the back gesture then means "back to the list", which is what it
- * should mean, without a route for every thread.
- */
 export function MailPage() {
   const { logout, me, permissions } = useAuth();
-  const [params] = useSearchParams();
+  const [params, setSearchParams] = useSearchParams();
   const previewBusy = deskPreviewActive(params.toString() ? `?${params}` : window.location.search);
   const canReadCompany = permissions.includes("MAIL_READ_ALL");
   const [mailMode, setMailMode] = useState<MailboxMode>("mine");
+  const urlBootstrapped = useRef(false);
+  const replyDirtyRef = useRef(false);
   const mineSidebar = useSidebar("mine");
   const companySidebar = useSidebar("company", canReadCompany);
   const sidebar = canReadCompany && mailMode === "company" ? companySidebar : mineSidebar;
-
-  const [selectedMailboxId, setSelectedMailboxId] = useState<string | null>(null);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [starredView, setStarredView] = useState(false);
-  const [selectedThread, setSelectedThread] = useState<Thread | null>(null);
-  const [composeOpen, setComposeOpen] = useState(false);
-  const [navOpen, setNavOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [unreadOnly, setUnreadOnly] = useState(false);
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const searchRef = useRef<HTMLInputElement>(null);
-  const setFlags = useSetFlags();
 
   const liveBoxes = sidebar.data ?? [];
   const mailboxes = previewBusy && liveBoxes.length === 0 ? previewMailboxes() : liveBoxes;
   const activeMode: MailboxMode = canReadCompany ? mailMode : "mine";
 
-  useEffect(() => {
-    if (selectedFolderId || starredView || mailboxes.length === 0) return;
-    const preferred = mailboxes.find((m) => m.mine) ?? mailboxes[0];
-    const inbox = preferred.folders.find((f) => f.kind === "INBOX") ?? preferred.folders[0];
-    if (inbox) {
-      setSelectedMailboxId(preferred.id);
-      setSelectedFolderId(inbox.id);
-    }
-  }, [mailboxes, selectedFolderId, starredView]);
+  const view = useMailViewState(mailboxes, previewBusy);
 
-  const folderThreads = useFolderThreads(starredView ? undefined : selectedFolderId ?? undefined);
-  const starredThreads = useStarred();
+  const [selectedThread, setSelectedThread] = useState<Thread | null>(null);
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [snoozeAnchor, setSnoozeAnchor] = useState<{ x: number; y: number } | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const setFlags = useSetFlags();
+  const moveThreads = useMoveThreads();
 
-  const liveThreads = starredView ? starredThreads.data ?? [] : folderThreads.data ?? [];
-  const threads =
-    previewBusy && liveThreads.length === 0
-      ? previewThreadsFor(selectedFolderId, starredView)
-      : liveThreads;
-  const listLoading = previewBusy ? false : starredView ? starredThreads.isLoading : folderThreads.isLoading;
-  const listError = starredView ? starredThreads.error : folderThreads.error;
+  const visibleIds = useMemo(() => view.visible.map((t) => t.id), [view.visible]);
+  const selection = useThreadSelection(visibleIds, view.listScopeKey);
+
+  const selectedThreads = useMemo(
+    () => view.visible.filter((t) => selection.selectedIds.has(t.id)),
+    [view.visible, selection.selectedIds],
+  );
 
   const activeMailbox = useMemo(
     () =>
-      mailboxes.find((m) => m.id === (selectedThread?.mailboxId ?? selectedMailboxId)) ??
+      mailboxes.find((m) => m.id === (selectedThread?.mailboxId ?? view.selectedMailboxId)) ??
       mailboxes[0],
-    [mailboxes, selectedMailboxId, selectedThread],
+    [mailboxes, view.selectedMailboxId, selectedThread],
   );
 
-  const activeFolder = useMemo(
-    () => activeMailbox?.folders.find((f) => f.id === selectedFolderId),
-    [activeMailbox, selectedFolderId],
-  );
+  const onDrafts = !view.starredView && !view.snoozedView && view.activeFolder?.kind === "DRAFTS";
 
-  /*
-    Drafts are a list of drafts, not a list of threads.
-    `useDrafts` and `ComposeDialog`'s `draft` prop were both written and neither was ever
-    connected, so the Drafts folder ran the ordinary thread query, found nothing, and said
-    the folder was empty — while compose went on autosaving into it. Half-finished mail went
-    in and could not come back out.
-  */
-  const onDrafts = !starredView && activeFolder?.kind === "DRAFTS";
+  useMailStream({
+    enabled: !previewBusy && !onDrafts,
+    selectedThreadId: selectedThread?.id ?? null,
+    activeFolderId: view.starredView || view.snoozedView ? null : view.selectedFolderId,
+  });
+
   const draftsQuery = useDrafts(onDrafts);
   const drafts = draftsQuery.data ?? [];
   const [editingDraft, setEditingDraft] = useState<Draft | null>(null);
@@ -126,142 +139,240 @@ export function MailPage() {
     setComposeOpen(true);
   };
 
+  const guardReplyDirty = useCallback(() => {
+    if (!replyDirtyRef.current) return true;
+    const leave = window.confirm("Discard this unsent reply?");
+    if (leave) replyDirtyRef.current = false;
+    return leave;
+  }, []);
+
+  const selectThread = useCallback(
+    (thread: Thread | null) => {
+      if (thread?.id === selectedThread?.id) return;
+      if (!guardReplyDirty()) return;
+      setSelectedThread(thread);
+    },
+    [guardReplyDirty, selectedThread?.id],
+  );
+
+  useEffect(() => {
+    if (urlBootstrapped.current || previewBusy || mailboxes.length === 0) return;
+    const parsed = parseMailUrlState(params.toString());
+    const resolved = resolveMailUrlState(parsed, mailboxes);
+    urlBootstrapped.current = true;
+
+    if (resolved.mode === "company" && canReadCompany) setMailMode("company");
+    if (resolved.virtualView === "starred") view.selectStarred();
+    else if (resolved.virtualView === "snoozed") view.selectSnoozed();
+    else if (resolved.mailbox && resolved.folderId) {
+      const folder = resolved.mailbox.folders.find((f) => f.id === resolved.folderId);
+      if (folder) view.selectFolder(resolved.mailbox, folder);
+    }
+
+    if (parsed.filters.q) view.setQuery(parsed.filters.q);
+    if (parsed.filters.unreadOnly) view.setUnreadOnly(true);
+    if (parsed.filters.hasAttachment) view.setHasAttachment(true);
+
+    if (resolved.compose) setComposeOpen(true);
+    if (resolved.draftId && drafts.length > 0) {
+      const draft = drafts.find((d) => d.id === resolved.draftId);
+      if (draft) openDraft(draft);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mailboxes, canReadCompany, previewBusy, params]);
+
+  useEffect(() => {
+    if (!urlBootstrapped.current || previewBusy) return;
+    const threadId = parseMailUrlState(params.toString()).threadId;
+    if (!threadId || selectedThread?.id === threadId) return;
+    const match = view.visible.find((t) => t.id === threadId);
+    if (match) setSelectedThread(match);
+  }, [view.visible, params, previewBusy, selectedThread?.id]);
+
+  const onReplyDirtyChange = useCallback((dirty: boolean) => {
+    replyDirtyRef.current = dirty;
+  }, []);
+
+  useEffect(() => {
+    if (!urlBootstrapped.current) return;
+    const desk = params.get("desk");
+    const next: MailUrlState = {
+      mode: canReadCompany ? mailMode : "mine",
+      virtualView: view.virtualView,
+      mailboxId: view.selectedMailboxId,
+      folderId: view.selectedFolderId,
+      threadId: selectedThread?.id ?? null,
+      compose: composeOpen,
+      draftId: editingDraft?.id ?? null,
+      filters: {
+        q: view.query.trim() || undefined,
+        unreadOnly: view.unreadOnly || undefined,
+        hasAttachment: view.hasAttachment || undefined,
+      },
+    };
+    const built = buildMailUrlSearchParams(next);
+    if (desk === "busy") built.set("desk", "busy");
+    const current = parseMailUrlState(`?${params.toString()}`);
+    const currentBuilt = buildMailUrlSearchParams({
+      ...current,
+      filters: {
+        q: current.filters.q,
+        unreadOnly: current.filters.unreadOnly,
+        hasAttachment: current.filters.hasAttachment,
+      },
+    });
+    if (desk === "busy") currentBuilt.set("desk", "busy");
+    if (mailUrlStateEquals(next, current) && built.toString() === currentBuilt.toString()) return;
+    setSearchParams(built, { replace: true });
+  }, [
+    mailMode,
+    canReadCompany,
+    view.virtualView,
+    view.selectedMailboxId,
+    view.selectedFolderId,
+    view.query,
+    view.unreadOnly,
+    view.hasAttachment,
+    selectedThread?.id,
+    composeOpen,
+    editingDraft?.id,
+    params,
+    setSearchParams,
+  ]);
+
   useEffect(() => {
     if (!selectedThread) return;
-    const fresh = threads.find((t) => t.id === selectedThread.id);
+    const fresh = view.threads.find((t) => t.id === selectedThread.id);
     if (fresh && fresh !== selectedThread) setSelectedThread(fresh);
-  }, [threads, selectedThread]);
-
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return threads.filter((thread) => {
-      if (unreadOnly && thread.read) return false;
-      if (!q) return true;
-      const hay = [thread.subject, thread.snippet, thread.correspondent, thread.correspondentName]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(q);
-    });
-  }, [threads, query, unreadOnly]);
+  }, [view.threads, selectedThread]);
 
   const selectMode = (mode: MailboxMode) => {
+    if (!guardReplyDirty()) return;
     setMailMode(mode);
-    setSelectedMailboxId(null);
-    setSelectedFolderId(null);
-    setStarredView(false);
+    view.resetForContextSwitch();
     setSelectedThread(null);
-    setQuery("");
+    selection.clear();
   };
 
   const selectFolder = (mailbox: MailboxSummary, folder: Folder) => {
-    setStarredView(false);
-    setSelectedMailboxId(mailbox.id);
-    setSelectedFolderId(folder.id);
+    if (!guardReplyDirty()) return;
+    view.selectFolder(mailbox, folder);
     setSelectedThread(null);
     setNavOpen(false);
-    setQuery("");
+    selection.clear();
+  };
+
+  const selectStarred = () => {
+    if (!guardReplyDirty()) return;
+    view.selectStarred();
+    setSelectedThread(null);
+    setNavOpen(false);
+    selection.clear();
+  };
+
+  const selectSnoozed = () => {
+    if (!guardReplyDirty()) return;
+    view.selectSnoozed();
+    setSelectedThread(null);
+    setNavOpen(false);
+    selection.clear();
   };
 
   const refresh = () => {
     void mineSidebar.refetch();
     if (canReadCompany) void companySidebar.refetch();
-    if (starredView) void starredThreads.refetch();
-    else void folderThreads.refetch();
+    if (view.snoozedView) void view.snoozedThreads.refetch();
+    else if (view.starredView) void view.starredThreads.refetch();
+    else void view.folderThreads.refetch();
   };
 
-  const listTitle = starredView
-    ? "Starred"
-    : (activeFolder?.name ?? (activeMode === "company" ? "Company mail" : "Inbox"));
+  const listTitle = view.snoozedView
+    ? "Snoozed"
+    : view.starredView
+      ? "Starred"
+      : (view.activeFolder?.name ?? (activeMode === "company" ? "Company mail" : "Inbox"));
 
   const empty =
-    query.trim().length > 0
+    (view.starredView || view.snoozedView
+      ? view.query.trim().length > 0
+      : view.debouncedQuery.trim().length > 0)
       ? emptyCopy.search
-      : starredView
-        ? emptyCopy.starred
-        : activeFolder?.kind === "DRAFTS"
-          ? emptyCopy.drafts
-          : activeFolder?.kind === "CUSTOM"
-            ? emptyCopy.room
-            : emptyCopy.inbox;
+      : view.snoozedView
+        ? emptyCopy.snoozed
+        : view.starredView
+          ? emptyCopy.starred
+          : view.activeFolder?.kind === "DRAFTS"
+            ? emptyCopy.drafts
+            : view.activeFolder?.kind === "CUSTOM"
+              ? emptyCopy.room
+              : emptyCopy.inbox;
 
   const previewThread = previewBusy && selectedThread?.id.startsWith("t");
+  const listLoadingWithSearch = view.listLoading || view.searchPending;
+
+  const moveOpenThread = useCallback(
+    (kind: "ARCHIVE" | "TRASH") => {
+      const thread = selectedThread;
+      if (!thread || previewBusy) return;
+      const mailbox =
+        mailboxes.find((m) => m.id === thread.mailboxId) ?? activeMailbox;
+      const folder = folderOfKind(mailbox, kind);
+      if (!folder) return;
+      moveThreads.mutate(
+        { folderId: folder.id, threadIds: [thread.id] },
+        { onSuccess: () => setSelectedThread(null) },
+      );
+    },
+    [selectedThread, previewBusy, mailboxes, activeMailbox, moveThreads],
+  );
+
+  const shortcutHandlers = useMemo(
+    () => ({
+      onFocusSearch: () => {},
+      onToggleShortcutSheet: () => setShortcutsOpen((open) => !open),
+      onCompose: () => setComposeOpen(true),
+      onArchive: () => moveOpenThread("ARCHIVE"),
+      onTrash: () => moveOpenThread("TRASH"),
+      onSnooze: () => {
+        if (!selectedThread || previewBusy) return;
+        setSnoozeAnchor({ x: window.innerWidth / 2, y: 120 });
+      },
+      onToggleSelect: () => {
+        if (!selectedThread) return;
+        selection.toggle(selectedThread.id);
+      },
+    }),
+    [moveOpenThread, previewBusy, selectedThread, selection],
+  );
+
+  useMailKeyboardShortcuts(searchRef, selectedThread, setFlags, shortcutHandlers);
 
   const onListKey = (event: KeyboardEvent<HTMLElement>) => {
     const target = event.target as HTMLElement;
     if (target.closest("input, textarea, [contenteditable='true']")) return;
-    if (visible.length === 0) return;
+    if (view.visible.length === 0) return;
 
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       const index = selectedThread
-        ? visible.findIndex((thread) => thread.id === selectedThread.id)
+        ? view.visible.findIndex((thread) => thread.id === selectedThread.id)
         : -1;
       const next =
         event.key === "ArrowDown"
-          ? visible[Math.min(visible.length - 1, Math.max(0, index + 1))]
-          : visible[Math.max(0, index <= 0 ? 0 : index - 1)];
-      if (next) setSelectedThread(next);
+          ? view.visible[Math.min(view.visible.length - 1, Math.max(0, index + 1))]
+          : view.visible[Math.max(0, index <= 0 ? 0 : index - 1)];
+      if (next) selectThread(next);
       return;
     }
-    if (event.key === "Enter" && !selectedThread && visible[0]) {
+    if (event.key === "Enter" && !selectedThread && view.visible[0]) {
       event.preventDefault();
-      setSelectedThread(visible[0]);
+      selectThread(view.visible[0]);
     }
     if (event.key === "Escape" && selectedThread) {
       event.preventDefault();
-      setSelectedThread(null);
+      selectThread(null);
     }
   };
-
-  /*
-    The verbs need whichever letter is open right now, and the listener is bound once. Read
-    through a ref rather than adding the thread to the dependencies: re-subscribing a window
-    listener on every arrow-key press is a lot of churn for a value that is only ever read
-    inside the handler.
-  */
-  const liveThread = useRef<Thread | null>(null);
-  liveThread.current = selectedThread;
-
-  useEffect(() => {
-    const onWindowKey = (event: globalThis.KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, [contenteditable='true']")) return;
-      // Modified keys belong to the browser and the OS. Only `?` needs Shift, and it carries
-      // it in `event.key` rather than as a modifier to test for.
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-
-      if (event.key === "/") {
-        event.preventDefault();
-        searchRef.current?.focus();
-        return;
-      }
-      if (event.key === "?") {
-        event.preventDefault();
-        setShortcutsOpen((open) => !open);
-        return;
-      }
-      if (event.key === "c") {
-        event.preventDefault();
-        setComposeOpen(true);
-        return;
-      }
-
-      const thread = liveThread.current;
-      if (!thread) return;
-      if (event.key === "s") {
-        event.preventDefault();
-        setFlags.mutate({ threadId: thread.id, starred: !thread.starred });
-        return;
-      }
-      if (event.key === "u") {
-        event.preventDefault();
-        setFlags.mutate({ threadId: thread.id, read: !thread.read });
-      }
-    };
-    window.addEventListener("keydown", onWindowKey);
-    return () => window.removeEventListener("keydown", onWindowKey);
-  }, [setFlags]);
 
   return (
     <div className="mr-shell">
@@ -283,7 +394,6 @@ export function MailPage() {
 
         <div className="mr-top__tools">
           <ThemeToggle />
-          {/* `?` opens the same sheet, but only for people who already suspect it exists. */}
           <Button
             variant="ghost"
             size="icon"
@@ -295,7 +405,12 @@ export function MailPage() {
             <Keyboard className="size-4" />
           </Button>
           <Button variant="ghost" size="icon" aria-label="Refresh" onClick={refresh}>
-            <RefreshCw className={cn("size-4", sidebar.isFetching && "animate-spin")} />
+            <RefreshCw
+              className={cn(
+                "size-4",
+                (sidebar.isFetching || view.listFetching) && "animate-spin",
+              )}
+            />
           </Button>
           <Button variant="ghost" size="icon" asChild>
             <Link to="/settings" aria-label="Settings">
@@ -309,7 +424,13 @@ export function MailPage() {
               </a>
             </Button>
           ) : null}
-          <button type="button" className="mr-account" onClick={() => void logout()} title="Sign out">
+          <button
+            type="button"
+            className="mr-account"
+            onClick={() => void logout()}
+            title="Sign out"
+            aria-label="Sign out"
+          >
             <span className="flex size-7 items-center justify-center rounded-full bg-surface-muted text-[10px] font-semibold text-text">
               {initials(me?.email ?? me?.displayName ?? "You")}
             </span>
@@ -332,7 +453,12 @@ export function MailPage() {
             <div className="mr-lockup__name">Mailroom</div>
             <div className="mr-lockup__tag">Company communication</div>
           </div>
-          <button type="button" className="mr-compose" onClick={() => setComposeOpen(true)}>
+          <button
+            type="button"
+            className="mr-compose"
+            aria-label="Compose new message"
+            onClick={() => setComposeOpen(true)}
+          >
             + Compose
           </button>
           {sidebar.isLoading && !previewBusy ? (
@@ -349,15 +475,14 @@ export function MailPage() {
               unreadMine={unreadTotal(mineSidebar.data ?? (previewBusy ? previewMailboxes() : []))}
               unreadCompany={unreadTotal(companySidebar.data ?? [])}
               onSelectMode={selectMode}
-              selectedFolderId={starredView ? null : selectedFolderId}
+              selectedFolderId={
+                view.starredView || view.snoozedView ? null : view.selectedFolderId
+              }
               onSelectFolder={selectFolder}
-              starredSelected={starredView}
-              onSelectStarred={() => {
-                setStarredView(true);
-                setSelectedFolderId(null);
-                setSelectedThread(null);
-                setNavOpen(false);
-              }}
+              starredSelected={view.starredView}
+              onSelectStarred={selectStarred}
+              snoozedSelected={view.snoozedView}
+              onSelectSnoozed={selectSnoozed}
             />
           )}
         </aside>
@@ -370,26 +495,43 @@ export function MailPage() {
         >
           <div className="mr-list__head">
             <div className="mr-list__title-row">
+              {!onDrafts && !previewBusy && view.visible.length > 0 ? (
+                <SelectAllCheckbox
+                  allSelected={selection.allVisibleSelected}
+                  someSelected={selection.someVisibleSelected}
+                  onToggle={selection.toggleAllVisible}
+                />
+              ) : null}
               <h1 className="mr-list__title">{listTitle}</h1>
               <p className="mr-list__count">
-                <b>{visible.length}</b>
-                {unreadOnly ? " unread" : visible.length === 1 ? " letter" : " letters"}
+                <b>
+                  {view.visible.length}
+                  {view.hasMoreThreads ? "+" : ""}
+                </b>
+                {view.unreadOnly ? " unread" : view.visible.length === 1 ? " letter" : " letters"}
               </p>
             </div>
-            {!starredView && activeMailbox ? (
+            {!view.starredView && !view.snoozedView && activeMailbox ? (
               <p className="mr-list__addr">{activeMailbox.address}</p>
             ) : null}
+            <BulkActionBar
+              selectedThreads={selectedThreads}
+              mailbox={activeMailbox}
+              readOnly={previewBusy || onDrafts}
+              snoozedView={view.snoozedView}
+              onClearSelection={selection.clear}
+            />
             <div className="mr-list__tools">
               <label className="mr-search">
                 <Search />
                 <input
                   ref={searchRef}
                   type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  value={view.query}
+                  onChange={(event) => view.setQuery(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === "Escape") {
-                      setQuery("");
+                      view.setQuery("");
                       searchRef.current?.blur();
                     }
                   }}
@@ -399,11 +541,22 @@ export function MailPage() {
               </label>
               <button
                 type="button"
-                className={cn("mr-filter", unreadOnly && "is-on")}
-                onClick={() => setUnreadOnly((value) => !value)}
+                className={cn("mr-filter", view.unreadOnly && "is-on")}
+                aria-pressed={view.unreadOnly}
+                onClick={() => view.setUnreadOnly((value) => !value)}
               >
-                {unreadOnly ? "Unread" : "All"}
+                {view.unreadOnly ? "Unread" : "All"}
               </button>
+              {view.virtualView === "folder" ? (
+                <button
+                  type="button"
+                  className={cn("mr-filter", view.hasAttachment && "is-on")}
+                  aria-pressed={view.hasAttachment}
+                  onClick={() => view.setHasAttachment((value) => !value)}
+                >
+                  Attachments
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -412,8 +565,8 @@ export function MailPage() {
               title="Your mailboxes would not load"
               hint={getApiErrorMessage(sidebar.error)}
             />
-          ) : listError && !previewBusy ? (
-            <EmptyState title="This folder would not load" hint={getApiErrorMessage(listError)} />
+          ) : view.listError && !previewBusy ? (
+            <EmptyState title="This folder would not load" hint={getApiErrorMessage(view.listError)} />
           ) : !sidebar.isLoading && mailboxes.length === 0 ? (
             <EmptyState
               title={activeMode === "company" ? emptyCopy.company.title : emptyCopy.mailboxes.title}
@@ -432,13 +585,19 @@ export function MailPage() {
             />
           ) : (
             <ThreadList
-              threads={visible}
-              isLoading={listLoading}
+              threads={view.visible}
+              isLoading={listLoadingWithSearch}
               selectedThreadId={selectedThread?.id ?? null}
-              onSelect={setSelectedThread}
+              onSelect={selectThread}
               emptyTitle={empty.title}
               emptyHint={empty.hint}
               readOnly={previewBusy}
+              hasMore={view.hasMoreThreads}
+              isLoadingMore={view.loadingMoreThreads}
+              onLoadMore={() => void view.loadMoreThreads()}
+              selectionEnabled
+              isThreadSelected={selection.isSelected}
+              onToggleThreadSelected={selection.toggle}
             />
           )}
         </section>
@@ -447,7 +606,7 @@ export function MailPage() {
           {selectedThread ? (
             <button
               type="button"
-              onClick={() => setSelectedThread(null)}
+              onClick={() => selectThread(null)}
               className="border-b border-border px-4 py-2 text-left text-xs text-text-muted md:hidden"
             >
               ← Back to the list
@@ -457,7 +616,8 @@ export function MailPage() {
             <ThreadPane
               thread={selectedThread}
               mailbox={activeMailbox}
-              onClosed={() => setSelectedThread(null)}
+              onClosed={() => selectThread(null)}
+              onReplyDirtyChange={onReplyDirtyChange}
               previewMessages={
                 previewThread && selectedThread ? previewMessages(selectedThread.id) : undefined
               }
@@ -470,9 +630,18 @@ export function MailPage() {
         open={composeOpen}
         onOpenChange={(next) => {
           setComposeOpen(next);
-          // Clear on close so the next "Compose" opens blank rather than reopening
-          // whichever draft was edited last.
-          if (!next) setEditingDraft(null);
+          if (!next) {
+            setEditingDraft(null);
+            setSearchParams(
+              (current) => {
+                const copy = new URLSearchParams(current);
+                copy.delete("compose");
+                copy.delete("draft");
+                return copy;
+              },
+              { replace: true },
+            );
+          }
         }}
         mailboxes={mailboxes}
         initialMailboxId={editingDraft?.mailboxId ?? activeMailbox?.id}
@@ -480,6 +649,19 @@ export function MailPage() {
       />
 
       <ShortcutSheet open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+
+      <SnoozeMenu
+        label="Snooze conversation"
+        disabled={!selectedThread || previewBusy}
+        anchor={snoozeAnchor}
+        onClose={() => setSnoozeAnchor(null)}
+        onPick={(iso) => {
+          if (!selectedThread) return;
+          setFlags.mutate({ threadId: selectedThread.id, snoozeUntil: iso, read: true });
+          setSnoozeAnchor(null);
+          setSelectedThread(null);
+        }}
+      />
     </div>
   );
 }

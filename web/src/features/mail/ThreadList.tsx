@@ -1,4 +1,6 @@
+import { useEffect, useRef } from "react";
 import { MailOpen, MoreHorizontal, Paperclip, Star, StarOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { useRowMenu, type RowMenuAction } from "@/components/ui/row-menu";
@@ -13,6 +15,12 @@ export function ThreadList({
   emptyTitle,
   emptyHint,
   readOnly = false,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
+  selectionEnabled = false,
+  isThreadSelected,
+  onToggleThreadSelected,
 }: {
   threads: Thread[];
   isLoading: boolean;
@@ -21,6 +29,12 @@ export function ThreadList({
   emptyTitle: string;
   emptyHint?: string;
   readOnly?: boolean;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
+  selectionEnabled?: boolean;
+  isThreadSelected?: (threadId: string) => boolean;
+  onToggleThreadSelected?: (threadId: string) => void;
 }) {
   if (isLoading) {
     return (
@@ -45,9 +59,60 @@ export function ThreadList({
           selected={thread.id === selectedThreadId}
           readOnly={readOnly}
           onSelect={onSelect}
+          selectionEnabled={selectionEnabled}
+          checked={isThreadSelected?.(thread.id) ?? false}
+          onToggleSelected={() => onToggleThreadSelected?.(thread.id)}
         />
       ))}
+      {hasMore && onLoadMore ? (
+        <li>
+          <LoadMoreFooter isLoadingMore={isLoadingMore} onLoadMore={onLoadMore} />
+        </li>
+      ) : null}
     </ul>
+  );
+}
+
+function LoadMoreFooter({
+  isLoadingMore,
+  onLoadMore,
+}: {
+  isLoadingMore: boolean;
+  onLoadMore: () => void;
+}) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || isLoadingMore) return;
+    const scrollRoot = sentinel.closest(".mr-rows");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) onLoadMore();
+      },
+      {
+        root: scrollRoot instanceof Element ? scrollRoot : null,
+        rootMargin: "240px",
+        threshold: 0,
+      },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [isLoadingMore, onLoadMore]);
+
+  return (
+    <div className="border-t border-border px-3 py-3">
+      <div ref={sentinelRef} className="h-px" aria-hidden />
+      <Button
+        type="button"
+        variant="secondary"
+        className="w-full"
+        disabled={isLoadingMore}
+        onClick={onLoadMore}
+      >
+        {isLoadingMore ? "Loading…" : "Load more"}
+      </Button>
+    </div>
   );
 }
 
@@ -63,11 +128,17 @@ function ThreadRow({
   selected,
   readOnly,
   onSelect,
+  selectionEnabled,
+  checked,
+  onToggleSelected,
 }: {
   thread: Thread;
   selected: boolean;
   readOnly: boolean;
   onSelect: (thread: Thread) => void;
+  selectionEnabled: boolean;
+  checked: boolean;
+  onToggleSelected: () => void;
 }) {
   const setFlags = useSetFlags();
 
@@ -79,6 +150,8 @@ function ThreadRow({
       toast.error("Could not reach the clipboard. Copy it by hand.");
     }
   };
+
+  const who = displayName(thread.correspondent, thread.correspondentName);
 
   const actions: RowMenuAction[] = [
     ...(readOnly
@@ -117,15 +190,32 @@ function ThreadRow({
     },
   ];
 
-  const who = displayName(thread.correspondent, thread.correspondentName);
   const { rowProps, menu, openAt } = useRowMenu(actions, `${who}: ${thread.subject}`);
 
   return (
     <li className="scan-row">
       <div
         {...rowProps}
-        className={cn("mr-row", selected && "is-on", !thread.read && "is-unread")}
+        className={cn(
+          "mr-row",
+          selected && "is-on",
+          checked && "is-checked",
+          !thread.read && "is-unread",
+        )}
       >
+        {selectionEnabled && !readOnly ? (
+          <input
+            type="checkbox"
+            className="mr-row__check"
+            checked={checked}
+            aria-label={`Select ${who}: ${thread.subject}`}
+            onChange={(event) => {
+              event.stopPropagation();
+              onToggleSelected();
+            }}
+            onClick={(event) => event.stopPropagation()}
+          />
+        ) : null}
         <button
           type="button"
           onClick={() => {
@@ -149,7 +239,7 @@ function ThreadRow({
             {thread.subject}
             {thread.hasAttachments || thread.messageCount > 1 ? (
               <span className="mr-row__meta">
-                {thread.hasAttachments ? <Paperclip className="size-3" /> : null}
+                {thread.hasAttachments ? <Paperclip className="size-3" aria-hidden /> : null}
                 {thread.messageCount > 1 ? thread.messageCount : null}
               </span>
             ) : null}
