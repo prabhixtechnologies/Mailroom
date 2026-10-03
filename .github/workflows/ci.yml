@@ -158,7 +158,7 @@ jobs:
           # it renders a "not configured" screen and nothing else.
           build-args: |
             VITE_API_URL=https://api.prabhixtechnologies.com
-            VITE_IDENTITY_ISSUER=https://api.prabhixtechnologies.com
+            VITE_IDENTITY_ISSUER=https://identity.prabhixtechnologies.com
             VITE_ONEOPS_URL=https://oneops.prabhixtechnologies.com
           tags: |
             ${{ steps.meta.outputs.base }}/mailroom:latest
