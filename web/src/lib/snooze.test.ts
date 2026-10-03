@@ -3,9 +3,10 @@ import { snoozePresets, snoozeUntilIso } from "./snooze";
 
 describe("snoozePresets", () => {
   it("returns three quick choices in order", () => {
-    const presets = snoozePresets(new Date("2026-10-02T10:00:00Z"));
+    const now = new Date("2026-10-02T10:00:00Z");
+    const presets = snoozePresets(now);
     expect(presets.map((p) => p.id)).toEqual(["later-today", "tomorrow", "next-week"]);
-    expect(presets[0]!.until().getTime()).toBeGreaterThan(Date.now() - 60_000);
+    expect(presets[0]!.until().getTime()).toBeGreaterThan(now.getTime());
   });
 });
 
