@@ -204,6 +204,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, [refreshSession, loadSession, clearSession]);
 
+  useEffect(() => {
+    const slide = () => {
+      if (document.visibilityState === "hidden" || !accessTokenRef.current) return;
+      void refreshSession();
+    };
+    const timer = window.setInterval(slide, 10 * 60 * 1000);
+    window.addEventListener("focus", slide);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", slide);
+    };
+  }, [refreshSession]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       accessToken,
