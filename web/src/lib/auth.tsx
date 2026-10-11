@@ -126,6 +126,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAccessToken(tokens.accessToken);
         return true;
       } catch (err) {
+        // A staff network change asks for a passkey or a one-time code. The cookie is still
+        // valid, so this is not a security revocation and later renewals must still run.
+        if (err instanceof ApiClientError && err.code === "STEP_UP_REQUIRED") {
+          return false;
+        }
         if (err instanceof ApiClientError && err.status === 403) {
           sessionGone.current = true;
           setSessionRecoveryReason("security_revoked");
@@ -190,7 +195,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Attempted unconditionally: this one request is what makes a sign-in on OneOps cover Mailroom.
         // Somebody who is not signed in pays a single 401 for it.
         if (!(await refreshSession())) {
-          clearSession();
+          if (sessionGone.current) {
+            clearSession();
+          }
           return;
         }
         try {

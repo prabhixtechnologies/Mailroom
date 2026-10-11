@@ -1,5 +1,11 @@
 import { z, ZodError } from "zod";
+import { beginStepUp, isOidcEnabled } from "@prabhixtechnologies/oidc-client";
 import { API_V1 } from "./config";
+import "./oidc-config";
+
+function onAuthCallback(): boolean {
+  return typeof window !== "undefined" && window.location.pathname.startsWith("/auth/callback");
+}
 
 export const apiErrorSchema = z.object({
   code: z.string(),
@@ -145,7 +151,13 @@ export async function apiRequest<T>(
       throw new ApiClientError(401, { code: "UNAUTHORIZED", message: "Session expired" });
     }
 
-    if (!response.ok) throw await parseError(response);
+    if (!response.ok) {
+      const error = await parseError(response);
+      if (error.code === "STEP_UP_REQUIRED" && isOidcEnabled() && !onAuthCallback()) {
+        void beginStepUp(`${window.location.pathname}${window.location.search}`);
+      }
+      throw error;
+    }
 
     if (response.status === 204 || response.headers.get("content-length") === "0") {
       return parseSchema(schema, null, path);
