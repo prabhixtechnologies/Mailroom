@@ -3,7 +3,6 @@ import { resolve } from "node:path";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
-import { describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { ShortcutSheet } from "@/features/mail/ShortcutSheet";
 

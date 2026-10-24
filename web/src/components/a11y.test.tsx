@@ -2,7 +2,6 @@ import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import axe from "axe-core";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { LogoMark } from "@/components/LogoMark";
 import { SignInPage } from "@/features/auth/SignInPage";

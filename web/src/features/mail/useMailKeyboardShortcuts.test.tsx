@@ -1,6 +1,5 @@
 import { render } from "@testing-library/react";
 import { useRef } from "react";
-import { describe, expect, it, vi } from "vitest";
 import { useMailKeyboardShortcuts } from "./useMailKeyboardShortcuts";
 import type { Thread } from "@/lib/mailbox";
 

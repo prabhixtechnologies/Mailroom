@@ -1,5 +1,4 @@
 import { QueryClient } from "@tanstack/react-query";
-import { describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_FOLDER_THREAD_PAGE_SIZE,
   flattenThreadPages,

@@ -1,4 +1,3 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { describePendingAttachment, resolveDraftAttachmentRows } from "./mail-attachments";
 
 describe("describePendingAttachment", () => {

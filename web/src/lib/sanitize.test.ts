@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { isolatedEmailDocument, sanitizeEmailHtml } from "./sanitize";
 
 describe("sanitizeEmailHtml", () => {

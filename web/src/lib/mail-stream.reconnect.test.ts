@@ -1,4 +1,3 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { connectMailStream } from "./mail-stream";
 
 describe("connectMailStream reconnect", () => {
